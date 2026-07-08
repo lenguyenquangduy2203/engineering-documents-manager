@@ -1,13 +1,13 @@
-use axum::{Router, routing::get};
+use anyhow::Ok;
 
-use crate::config;
+use crate::{configs::{self, server::ServerConfig}, utils, web::routes};
 
-pub async fn run() {
-    config::setup_logging();
+pub async fn run() -> anyhow::Result<()> {
+    utils::loggers::setup_tracing();
 
-    let config = config::Config::from_env();
-    let addr =format!("{}:{}", config.host, config.port);
-    let app = build_router();
+    let config = configs::Config::from_env();
+    let addr = config.get_addr();
+    let app = routes::build().await?;
 
     tracing::info!("Server starting up on http://{}", addr);
 
@@ -16,12 +16,6 @@ pub async fn run() {
         .unwrap();
 
     axum::serve(listener, app).await.unwrap();
-}
 
-fn build_router() -> Router {
-    Router::new().route("/", get(root_handler))
-}
-
-async fn root_handler() -> &'static str {
-    "Hello, World!"
+    Ok(())
 }
