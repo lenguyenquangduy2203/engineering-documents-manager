@@ -12,5 +12,7 @@ pub async fn get_conn() -> anyhow::Result<Pool<Sqlite>> {
         .create_if_missing(config.should_create_on_missing())
     ).await?;
 
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
     Ok(pool)
 }
