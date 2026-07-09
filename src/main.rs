@@ -1,5 +1,6 @@
 use anyhow::Ok;
 
+mod core;
 mod configs;
 mod web;
 mod utils;
