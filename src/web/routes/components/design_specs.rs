@@ -1,7 +1,7 @@
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
-use crate::{core::components::repositories::ComponentsRepository, web::routes::context::Context};
+use crate::{core::components::{models::Component, repositories::ComponentsRepository}, web::routes::context::Context};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DecisionRecord {
@@ -16,11 +16,7 @@ pub enum DesignSpecSubType {
     DecisionRecord(DecisionRecord),
 }
 
-#[derive(Deserialize)]
-pub struct DesignSpecComponent {
-    pub title: String,
-    pub payload: DesignSpecSubType,
-}
+pub type DesignSpecComponent = Component<DesignSpecSubType>;
 
 #[derive(Serialize)]
 pub struct CreatedResponse {
@@ -31,16 +27,7 @@ pub async fn add_new_design_spec(
     State(ctx): State<Context>, 
     Json(design_spec): Json<DesignSpecComponent>
 ) -> impl IntoResponse {
-    let subtype_str = match &design_spec.payload {
-        DesignSpecSubType::DecisionRecord(_) => "DecisionRecord",
-    };
-    let component_type = format!("DesignSpec:{}", subtype_str);
-    let json_payload = match serde_json::to_value(&design_spec.payload) {
-        Ok(val) => val,
-        Err(e) => return (StatusCode::BAD_REQUEST, format!("Invalid payload layout: {e}")).into_response(),
-    };
-
-    match ctx.save(&component_type, &design_spec.title, json_payload).await {
+    match ctx.save(&design_spec).await {
         Ok(generated_id) => {
             (
                 StatusCode::CREATED, 

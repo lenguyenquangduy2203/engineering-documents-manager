@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde_json::Value;
+use serde::Serialize;
 use sqlx::{Pool, Sqlite};
 
-use crate::core::components::repositories::ComponentsRepository;
+use crate::core::components::{models::Component, repositories::ComponentsRepository};
 
 #[derive(Clone)]
 pub struct Context {
@@ -19,15 +19,19 @@ impl Context {
 
 #[async_trait]
 impl ComponentsRepository for Context {
-    async fn save(&self, component_type: &str, title: &str, payload: Value) -> anyhow::Result<u32> {
+    async fn save<T>(&self, component: &Component<T>) -> anyhow::Result<u32>
+    where T: Serialize + Send + Sync {
         let mut tx = self.dbc.begin().await?;
+        let payload = serde_json::to_value(&component.payload)?;
+        let subtype_name = payload.get("type").and_then(|v| v.as_str()).unwrap_or("Unknown");
+        let identifier = format!("{}:{}", component.component_type, subtype_name);
         let result = sqlx::query!(
             r#"
             INSERT INTO components (type, current_title) 
             VALUES (?, ?)
             "#, 
-            component_type, 
-            title
+            identifier, 
+            component.title
         )
         .execute(&mut *tx)
         .await?;

@@ -4,6 +4,7 @@ Content-Type: application/json
 
 {
     "title": "Architecture Decision: Database Migration",
+    "component_type": "DesignSpec",
     "payload": {
         "type": "DecisionRecord",
         "data": {
