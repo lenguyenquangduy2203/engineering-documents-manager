@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::core::components::models::values::paths::AssetPath;
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MermaidDiagram {
     pub definition: String,
@@ -7,7 +9,7 @@ pub struct MermaidDiagram {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ImageLink {
-    pub url: String,
+    pub path: AssetPath,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

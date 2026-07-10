@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+use crate::core::components::models::values::{http_method::HttpMethod, paths::ApiPath};
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ApiEndpoint {
-    pub endpoint: String,
-    pub method: String,
+    pub endpoint: ApiPath,
+    pub method: HttpMethod,
     pub request_body_example: String,
 }
 
