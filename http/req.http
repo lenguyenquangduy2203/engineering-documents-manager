@@ -1,19 +1,21 @@
 ### Create a new Design Spec Component (Decision Record Subtype)
-POST http://localhost:3000/specs
+POST http://localhost:3000/components
 Content-Type: application/json
 
 {
     "title": "Architecture Decision: Database Migration",
-    "component_type": "DesignSpec",
     "payload": {
-        "type": "DecisionRecord",
+        "group": "DesignSpec",
         "data": {
-            "decision": "Migrate core ledger to PostgreSQL",
-            "rationale": "We require robust native JSONB support and atomic multi-table transactions for workspace history tracking.",
-            "alternatives_considered": [
-                "MySQL (Limited JSON optimization options)",
-                "MongoDB (Lacks relational integrity constraints for transactional history logs)"
-            ]
+            "type": "DecisionRecord",
+            "data": {
+                "decision": "Migrate core ledger to PostgreSQL",
+                "rationale": "We require robust native JSONB support and atomic multi-table transactions for workspace history tracking.",
+                "alternatives_considered": [
+                    "MySQL (Limited JSON optimization options)",
+                    "MongoDB (Lacks relational integrity constraints for transactional history logs)"
+                ]
+            }
         }
     }
 }
