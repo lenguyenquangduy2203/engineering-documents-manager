@@ -24,7 +24,7 @@ async fn add_new_component(
             ).into_response()
         }
         Err(err) => {
-            tracing::warn!("Database layout update execution failed: {:?}", err);
+            tracing::warn!("Database component insert execution failed: {:?}", err);
             (
                 StatusCode::INTERNAL_SERVER_ERROR, 
                 "Failed to register component changes to the workspace history ledger."
