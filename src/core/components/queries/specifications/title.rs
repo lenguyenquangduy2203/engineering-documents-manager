@@ -1,0 +1,12 @@
+use sqlx::{QueryBuilder, Sqlite};
+
+use crate::infra::dbc::sqlx::FilterSpecification;
+
+pub struct TitleSpec(pub String);
+
+impl FilterSpecification for TitleSpec {
+    fn apply(&self, builder: &mut QueryBuilder<Sqlite>) {
+        builder.push(" AND c.current_title LIKE ");
+        builder.push_bind(format!("%{}%", self.0));
+    }
+}

@@ -19,3 +19,7 @@ Content-Type: application/json
         }
     }
 }
+
+### Get all up-to-date components
+GET http://localhost:3000/components?group=DesignSpec
+Content-Type: application/json

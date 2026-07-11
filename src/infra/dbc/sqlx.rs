@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::Ok;
-use sqlx::{Pool, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
+use sqlx::{Pool, QueryBuilder, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
 
 use crate::configs::{self, dbc::DBCConfig};
 
@@ -15,4 +15,8 @@ pub async fn get_conn() -> anyhow::Result<Pool<Sqlite>> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     Ok(pool)
+}
+
+pub trait FilterSpecification: Send + Sync {
+    fn apply(&self, builder: &mut QueryBuilder<Sqlite>);
 }

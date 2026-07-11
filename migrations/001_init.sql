@@ -5,7 +5,8 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS components (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,                  -- "Schematic", "DesignSpec", etc.
-    current_title TEXT NOT NULL
+    current_title TEXT NOT NULL,
+    latest_version_number INTEGER NOT NULL DEFAULT 1
 );
 
 -- 2. Component Versions Data (The actual JSON state trait)
