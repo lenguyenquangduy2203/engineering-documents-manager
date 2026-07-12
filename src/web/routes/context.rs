@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Pool, QueryBuilder, Sqlite};
 
-use crate::core::components::{models::{payload::ComponentPayload, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentsRepository}};
+use crate::core::components::{models::{payload::ComponentPayload, wrapper::Component, values::version::Version}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentsRepository}};
 
 #[derive(Clone)]
 pub struct Context {
@@ -24,24 +24,24 @@ impl ComponentsRepository for Context {
         let payload = serde_json::to_value(&component.payload)?;
         let result = sqlx::query!(
             r#"
-            INSERT INTO components (type, current_title) 
-            VALUES (?, ?)
+            INSERT INTO components (type, current_title, latest_version_number) 
+            VALUES (?, ?, ?)
             "#, 
             identifier, 
-            component.title
+            component.title,
+            component.version.0,
         )
         .execute(&mut *tx)
         .await?;
 
         let generated_id = result.last_insert_rowid() as u32;
-        let initial_version = 1;
         sqlx::query!(
             r#"
             INSERT INTO component_versions (component_id, version_number, data)
             VALUES (?, ?, ?)
             "#,
             generated_id,
-            initial_version,
+            component.version.0,
             payload
         )
         .execute(&mut *tx)
@@ -58,7 +58,7 @@ impl ComponentsRepository for Context {
     ) -> anyhow::Result<Vec<Component<ComponentPayload>>> {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
-            SELECT c.id, c.type as component_type, c.current_title, v.data as payload_json
+            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
             FROM components c
             JOIN component_versions v 
                 ON c.id = v.component_id 
@@ -77,12 +77,41 @@ impl ComponentsRepository for Context {
             let payload: ComponentPayload = serde_json::from_str(&payload_str)?;
 
             components.push(Component {
-                id: Some(row.get::<i32, _>("id") as u32),
+                id: Some(row.get::<u32, _>("id")),
+                version: Version(row.get::<u32, _>("latest_version_number")),
                 title: row.get("current_title"),
                 payload,
             });
         }
 
         Ok(components)
+    }
+
+    async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
+            FROM components c
+            JOIN component_versions v 
+                ON c.id = v.component_id 
+                AND c.latest_version_number = v.version_number
+            WHERE c.id = ?
+            "#,
+            component_id,
+        ).fetch_optional(&*self.dbc).await?;
+        
+        match row {
+            Some(record) => {
+                let payload: ComponentPayload = serde_json::from_str(&record.payload_json)?;
+
+                Ok(Some(Component { 
+                    id: Some(record.id as u32), 
+                    version: Version(record.latest_version_number as u32), 
+                    title: record.current_title, 
+                    payload 
+                }))
+            },
+            None => Ok(None),
+        }
     }
 }

@@ -23,3 +23,7 @@ Content-Type: application/json
 ### Get all up-to-date components
 GET http://localhost:3000/components?group=DesignSpec
 Content-Type: application/json
+
+### Get up-to-date component by id
+GET http://localhost:3000/components/1
+Content-Type: application/json

@@ -27,4 +27,5 @@ pub trait ComponentsRepository: Send + Sync {
         &self, 
         filter: ComponentFilterQuery
     ) -> anyhow::Result<Vec<Component<ComponentPayload>>>;
+    async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>>;
 }
