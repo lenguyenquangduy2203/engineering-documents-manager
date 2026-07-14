@@ -28,4 +28,8 @@ pub trait ComponentsRepository: Send + Sync {
         filter: ComponentFilterQuery
     ) -> anyhow::Result<Vec<Component<ComponentPayload>>>;
     async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>>;
+    async fn update_component(
+        &self, 
+        incoming_component: Component<ComponentPayload>
+    ) -> anyhow::Result<Option<Component<ComponentPayload>>>;
 }

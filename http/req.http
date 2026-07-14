@@ -27,3 +27,25 @@ Content-Type: application/json
 ### Get up-to-date component by id
 GET http://localhost:3000/components/1
 Content-Type: application/json
+
+### Update component by id
+PUT http://localhost:3000/components/1
+Content-Type: application/json
+
+{
+    "title": "Architecture Decision: Database Selection",
+    "payload": {
+        "group": "DesignSpec",
+        "data": {
+            "type": "DecisionRecord",
+            "data": {
+                "decision": "Chose core ledger to SQLite",
+                "rationale": "We require robust native JSON support and atomic multi-table transactions for workspace history tracking.",
+                "alternatives_considered": [
+                    "MySQL (Limited JSON optimization options)",
+                    "MongoDB (Lacks relational integrity constraints for transactional history logs)"
+                ]
+            }
+        }
+    }
+}

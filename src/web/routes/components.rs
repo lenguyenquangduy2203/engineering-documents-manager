@@ -1,4 +1,4 @@
-use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{get, post}};
+use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{get, post, put}};
 use serde::{Deserialize, Serialize};
 use crate::{core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, repositories::{ComponentFilterQuery, ComponentsRepository}}, web::routes::context::Context};
 
@@ -7,6 +7,7 @@ pub fn build() -> Router<Context> {
         .route("/components", post(add_new_component))
         .route("/components", get(get_all_latest_components))
         .route("/components/{id}", get(get_latest_component))
+        .route("/components/{id}", put(update_component_by_id))
 }
 
 #[derive(Deserialize)]
@@ -78,6 +79,37 @@ async fn get_latest_component(
         Err(err) => {
             tracing::warn!("Failed to find component with id={:?}: {:?}", id, err);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to find component").into_response()
+        },
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UpdateComponentRequest<T> {
+    pub title: String,
+    pub payload: T,
+}
+
+async fn update_component_by_id(
+    State(ctx): State<Context>,
+    Path(id): Path<u32>,
+    Json(request): Json<UpdateComponentRequest<ComponentPayload>>
+) -> impl IntoResponse {
+    let to_be_updated_component = Component {
+        id: Some(id),
+        title: request.title,
+        version: Version::default(),
+        payload: request.payload,
+    };
+
+    match ctx.update_component(to_be_updated_component).await {
+        Ok(opt) => match opt {
+            Some(component) => (StatusCode::OK, Json(component)).into_response(),
+            None => (StatusCode::NOT_FOUND, "Found no component with expected id for update").into_response(),
+        },
+        Err(err) => {
+            tracing::warn!("Failed to update component with id={:?}: {:?}", id, err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update component").into_response()
         },
     }
 }

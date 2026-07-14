@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use sqlx::{Pool, QueryBuilder, Sqlite};
 
@@ -113,5 +114,77 @@ impl ComponentsRepository for Context {
             },
             None => Ok(None),
         }
+    }
+
+    async fn update_component(
+        &self, 
+        incoming_component: Component<ComponentPayload>
+    ) -> anyhow::Result<Option<Component<ComponentPayload>>> {
+        let component_id = incoming_component.id.ok_or_else(|| {
+            anyhow!("No id is specified for update")
+        })?;
+
+        let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
+        let row = sqlx::query!(
+            r#"
+            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
+            FROM components c
+            JOIN component_versions v 
+                ON c.id = v.component_id 
+                AND c.latest_version_number = v.version_number
+            WHERE c.id = ?
+            "#,
+            component_id,
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let record = match row {
+            Some(r) => r,
+            None => {
+                tx.commit().await?; // Cleanly close transaction if nothing to do
+                return Ok(None);
+            }
+        };
+
+        let current_payload: ComponentPayload = serde_json::from_str(&record.payload_json)?;
+        let current_component = Component {
+            id: Some(record.id as u32),
+            version: Version(record.latest_version_number as u32),
+            title: record.current_title,
+            payload: current_payload,
+        };
+
+        let updated_component = current_component.apply_changes(incoming_component)?;
+        let updated_payload_value = serde_json::to_value(&updated_component.payload)?;
+
+        sqlx::query!(
+            r#"
+            UPDATE components
+            SET latest_version_number = ?, current_title = ?
+            WHERE id = ?
+            "#,
+            updated_component.version.0,
+            updated_component.title,
+            updated_component.id,
+        )
+        .execute(&mut *tx)
+        .await?;
+        
+        sqlx::query!(
+            r#"
+            INSERT INTO component_versions (component_id, version_number, data)
+            VALUES (?, ?, ?)
+            "#,
+            updated_component.id,
+            updated_component.version.0,
+            updated_payload_value
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        return Ok(Some(updated_component));
     }
 }
