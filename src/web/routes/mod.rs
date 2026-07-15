@@ -5,11 +5,12 @@ use std::sync::Arc;
 
 use axum::{Router, routing::get};
 
-use crate::{infra::dbc::sqlx::get_conn, web::routes::{context::Context}};
+use crate::{infra::{dbc::sqlx::get_conn, repositories::sqlx::components::SqliteComponentRepository}, web::routes::context::Context};
 
 pub async fn build() -> anyhow::Result<Router> {
     let dbc = Arc::new(get_conn().await?);
-    let ctx = Context::new(dbc);
+    let component_repository = Arc::new(SqliteComponentRepository::new(dbc.clone()));
+    let ctx = Context::new(component_repository);
     let router = Router::new()
         .merge(components::build())
         .merge(Router::new().route("/", get(root_handler)))

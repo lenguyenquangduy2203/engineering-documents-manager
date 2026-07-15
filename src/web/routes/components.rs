@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{get, post, put}};
 use serde::{Deserialize, Serialize};
 use crate::{core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, repositories::{ComponentFilterQuery, ComponentsRepository}}, web::routes::context::Context};
@@ -9,6 +11,8 @@ pub fn build() -> Router<Context> {
         .route("/components/{id}", get(get_latest_component))
         .route("/components/{id}", put(update_component_by_id))
 }
+
+type ComponentCtx = Arc<dyn ComponentsRepository>;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -34,7 +38,7 @@ struct CreatedResponse {
 }
 
 async fn add_new_component(
-    State(ctx): State<Context>, 
+    State(ctx): State<ComponentCtx>, 
     Json(request): Json<CreateComponentRequest<ComponentPayload>>
 ) -> impl IntoResponse {
     match ctx.create_new(&request.into()).await {
@@ -55,7 +59,7 @@ async fn add_new_component(
 }
 
 async fn get_all_latest_components(
-    State(ctx): State<Context>,
+    State(ctx): State<ComponentCtx>,
     Query(filter): Query<ComponentFilterQuery>,
 ) -> impl IntoResponse {
     match ctx.find_all_latest_version(filter).await {
@@ -68,7 +72,7 @@ async fn get_all_latest_components(
 }
 
 async fn get_latest_component(
-    State(ctx): State<Context>,
+    State(ctx): State<ComponentCtx>,
     Path(id): Path<u32>,
 ) -> impl IntoResponse {
     match ctx.find_latest_version_by_id(id).await {
@@ -91,7 +95,7 @@ pub struct UpdateComponentRequest<T> {
 }
 
 async fn update_component_by_id(
-    State(ctx): State<Context>,
+    State(ctx): State<ComponentCtx>,
     Path(id): Path<u32>,
     Json(request): Json<UpdateComponentRequest<ComponentPayload>>
 ) -> impl IntoResponse {
