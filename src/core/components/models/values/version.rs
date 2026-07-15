@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Version(pub u32);
 
 impl Version {

@@ -2,9 +2,28 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use sqlx::{Pool, QueryBuilder, Sqlite};
+use serde_json::Value;
+use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, Transaction, sqlite::SqliteRow};
 
 use crate::core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentsRepository}};
+
+impl TryFrom<SqliteRow> for Component<ComponentPayload> {
+    type Error = anyhow::Error;
+
+    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
+        let payload_str: String = row.get("payload_json");
+        let payload: ComponentPayload = serde_json::from_str(&payload_str)?;
+
+        Ok(Self {
+            id: Some(row.get::<u32, _>("id")),
+            version: Version(row.get::<u32, _>("latest_version_number")),
+            title: row.get("current_title"),
+            payload,
+        })
+    }
+}
+
+
 
 pub struct SqliteComponentRepository {
     dbc: Arc<Pool<Sqlite>>,
@@ -13,6 +32,45 @@ pub struct SqliteComponentRepository {
 impl SqliteComponentRepository {
     pub fn new(dbc: Arc<Pool<Sqlite>>) -> Self {
         Self { dbc }
+    }
+
+    async fn insert_new_component_version(
+        component_id: u32, 
+        version: Version, 
+        payload: &Value, 
+        tx: &mut Transaction<'_, Sqlite>
+    ) -> anyhow::Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO component_versions (component_id, version_number, data)
+            VALUES (?, ?, ?)
+            "#,
+            component_id,
+            version.0,
+            payload
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn fetch_opt_component_row<'c, E: Executor<'c, Database = Sqlite>>(
+        component_id: u32, 
+        executor: E
+    ) -> anyhow::Result<Option<SqliteRow>> {
+        Ok(sqlx::query(
+            r#"
+            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
+            FROM components c
+            JOIN component_versions v 
+                ON c.id = v.component_id 
+                AND c.latest_version_number = v.version_number
+            WHERE c.id = $1
+            "#
+        )
+        .bind(component_id)
+        .fetch_optional(executor).await?)
     }
 }
 
@@ -35,16 +93,12 @@ impl ComponentsRepository for SqliteComponentRepository {
         .await?;
 
         let generated_id = result.last_insert_rowid() as u32;
-        sqlx::query!(
-            r#"
-            INSERT INTO component_versions (component_id, version_number, data)
-            VALUES (?, ?, ?)
-            "#,
-            generated_id,
-            component.version.0,
-            payload
+        Self::insert_new_component_version(
+            generated_id, 
+            component.version, 
+            &payload, 
+            &mut tx
         )
-        .execute(&mut *tx)
         .await?;
 
         tx.commit().await?;
@@ -70,47 +124,15 @@ impl ComponentsRepository for SqliteComponentRepository {
         specs.apply(&mut qb);
         let query = qb.build();
         let rows = query.fetch_all(&*self.dbc).await?;
-        let mut components = Vec::new();
-        for row in rows {
-            use sqlx::Row;
-            let payload_str: String = row.get("payload_json");
-            let payload: ComponentPayload = serde_json::from_str(&payload_str)?;
 
-            components.push(Component {
-                id: Some(row.get::<u32, _>("id")),
-                version: Version(row.get::<u32, _>("latest_version_number")),
-                title: row.get("current_title"),
-                payload,
-            });
-        }
-
-        Ok(components)
+        rows.into_iter()
+            .map(Component::try_from)
+            .collect()
     }
 
     async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>> {
-        let row = sqlx::query!(
-            r#"
-            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
-            FROM components c
-            JOIN component_versions v 
-                ON c.id = v.component_id 
-                AND c.latest_version_number = v.version_number
-            WHERE c.id = ?
-            "#,
-            component_id,
-        ).fetch_optional(&*self.dbc).await?;
-        
-        match row {
-            Some(record) => {
-                let payload: ComponentPayload = serde_json::from_str(&record.payload_json)?;
-
-                Ok(Some(Component { 
-                    id: Some(record.id as u32), 
-                    version: Version(record.latest_version_number as u32), 
-                    title: record.current_title, 
-                    payload 
-                }))
-            },
+        match Self::fetch_opt_component_row(component_id, &*self.dbc).await? {
+            Some(row) => Ok(Some(Component::try_from(row)?)),
             None => Ok(None),
         }
     }
@@ -124,21 +146,7 @@ impl ComponentsRepository for SqliteComponentRepository {
         })?;
 
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
-        let row = sqlx::query!(
-            r#"
-            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
-            FROM components c
-            JOIN component_versions v 
-                ON c.id = v.component_id 
-                AND c.latest_version_number = v.version_number
-            WHERE c.id = ?
-            "#,
-            component_id,
-        )
-        .fetch_optional(&mut *tx)
-        .await?;
-
-        let record = match row {
+        let row = match Self::fetch_opt_component_row(component_id, &mut *tx).await? {
             Some(r) => r,
             None => {
                 tx.commit().await?; // Cleanly close transaction if nothing to do
@@ -146,14 +154,7 @@ impl ComponentsRepository for SqliteComponentRepository {
             }
         };
 
-        let current_payload: ComponentPayload = serde_json::from_str(&record.payload_json)?;
-        let current_component = Component {
-            id: Some(record.id as u32),
-            version: Version(record.latest_version_number as u32),
-            title: record.current_title,
-            payload: current_payload,
-        };
-
+        let current_component = Component::try_from(row)?;
         let updated_component = current_component.apply_changes(incoming_component)?;
         let updated_payload_value = serde_json::to_value(&updated_component.payload)?;
 
@@ -170,20 +171,16 @@ impl ComponentsRepository for SqliteComponentRepository {
         .execute(&mut *tx)
         .await?;
         
-        sqlx::query!(
-            r#"
-            INSERT INTO component_versions (component_id, version_number, data)
-            VALUES (?, ?, ?)
-            "#,
-            updated_component.id,
-            updated_component.version.0,
-            updated_payload_value
+        Self::insert_new_component_version(
+            component_id, 
+            updated_component.version, 
+            &updated_payload_value, 
+            &mut tx
         )
-        .execute(&mut *tx)
         .await?;
 
         tx.commit().await?;
 
-        return Ok(Some(updated_component));
+        Ok(Some(updated_component))
     }
 }
