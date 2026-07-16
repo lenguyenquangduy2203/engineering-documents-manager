@@ -148,10 +148,7 @@ impl ComponentsRepository for SqliteComponentRepository {
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
         let row = match Self::fetch_opt_component_row(component_id, &mut *tx).await? {
             Some(r) => r,
-            None => {
-                tx.commit().await?; // Cleanly close transaction if nothing to do
-                return Ok(None);
-            }
+            None => return Ok(None),
         };
 
         let current_component = Component::try_from(row)?;
@@ -182,5 +179,36 @@ impl ComponentsRepository for SqliteComponentRepository {
         tx.commit().await?;
 
         Ok(Some(updated_component))
+    }
+
+    async fn remove_component_with_all_versions_by_id(&self, component_id: u32) -> anyhow::Result<()> {
+        let mut tx = self.dbc.begin().await?;
+        sqlx::query!(
+            r#"
+            DELETE FROM component_versions
+            WHERE component_id = ?
+            "#,
+            component_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        let res = sqlx::query!(
+            r#"
+            DELETE FROM components
+            WHERE id = ?
+            "#,
+            component_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        if res.rows_affected() == 0 {
+            return Err(anyhow!("Component with ID {} does not exist", component_id));
+        }
+
+        tx.commit().await?;
+
+        Ok(())
     }
 }

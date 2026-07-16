@@ -32,4 +32,5 @@ pub trait ComponentsRepository: Send + Sync {
         &self, 
         incoming_component: Component<ComponentPayload>
     ) -> anyhow::Result<Option<Component<ComponentPayload>>>;
+    async fn remove_component_with_all_versions_by_id(&self, component_id: u32) -> anyhow::Result<()>;
 }

@@ -25,11 +25,11 @@ GET http://localhost:3000/components?group=DesignSpec
 Content-Type: application/json
 
 ### Get up-to-date component by id
-GET http://localhost:3000/components/1
+GET http://localhost:3000/components/2
 Content-Type: application/json
 
 ### Update component by id
-PUT http://localhost:3000/components/1
+PUT http://localhost:3000/components/2
 Content-Type: application/json
 
 {
@@ -49,3 +49,6 @@ Content-Type: application/json
         }
     }
 }
+
+### Delete a component by id
+DELETE http://localhost:3000/components/1

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{get, post, put}};
+use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, post, put}};
 use serde::{Deserialize, Serialize};
 use crate::{core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, repositories::{ComponentFilterQuery, ComponentsRepository}}, web::routes::context::Context};
 
@@ -10,6 +10,7 @@ pub fn build() -> Router<Context> {
         .route("/components", get(get_all_latest_components))
         .route("/components/{id}", get(get_latest_component))
         .route("/components/{id}", put(update_component_by_id))
+        .route("/components/{id}", delete(remove_component_by_id))
 }
 
 type ComponentCtx = Arc<dyn ComponentsRepository>;
@@ -114,6 +115,19 @@ async fn update_component_by_id(
         Err(err) => {
             tracing::warn!("Failed to update component with id={:?}: {:?}", id, err);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update component").into_response()
+        },
+    }
+}
+
+async fn remove_component_by_id(
+    State(ctx): State<ComponentCtx>,
+    Path(id): Path<u32>
+) -> impl IntoResponse {
+    match ctx.remove_component_with_all_versions_by_id(id).await {
+        Ok(_) => (StatusCode::NO_CONTENT).into_response(),
+        Err(err) => {
+            tracing::warn!("{}", err.to_string());
+            (StatusCode::NOT_FOUND, err.to_string()).into_response()
         },
     }
 }
