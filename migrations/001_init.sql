@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS component_versions (
 -- 3. Document Entities (Holding the Layout Array Component)
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,             -- "SystemDesignDoc", "APIDoc"
     title TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'draft',
     is_completed INTEGER DEFAULT 0,
