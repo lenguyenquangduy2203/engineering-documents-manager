@@ -1,6 +1,4 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ApiDoc;
 
 impl ApiDoc {
