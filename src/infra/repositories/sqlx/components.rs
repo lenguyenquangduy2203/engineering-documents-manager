@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, Transaction, sqlite::SqliteRow};
 
-use crate::core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentRef, ComponentsRepository}};
+use crate::core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentsRepository}};
 
 impl TryFrom<SqliteRow> for Component<ComponentPayload> {
     type Error = anyhow::Error;
@@ -210,12 +210,5 @@ impl ComponentsRepository for SqliteComponentRepository {
         tx.commit().await?;
 
         Ok(())
-    }
-
-    async fn find_all_components_with_type_by_version_ids(
-        &self,
-        version_ids: &[u32]
-    ) -> anyhow::Result<Vec<ComponentRef>> {
-        todo!()
     }
 }

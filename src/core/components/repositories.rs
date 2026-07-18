@@ -19,13 +19,6 @@ pub struct ComponentFilterQuery {
     pub limit: Option<i64>,
     pub offset: Option<i64>,
 }
-
-pub struct ComponentRef {
-    pub id: u32,
-    pub version_id: u32,
-    pub component_type: String,
-}
-
 #[async_trait]
 pub trait ComponentsRepository: Send + Sync {
     async fn create_new(&self, component: &Component<ComponentPayload>) -> anyhow::Result<u32>;
@@ -39,6 +32,17 @@ pub trait ComponentsRepository: Send + Sync {
         incoming_component: Component<ComponentPayload>
     ) -> anyhow::Result<Option<Component<ComponentPayload>>>;
     async fn remove_component_with_all_versions_by_id(&self, component_id: u32) -> anyhow::Result<()>;
+}
+
+
+pub struct ComponentRef {
+    pub id: u32,
+    pub version_id: u32,
+    pub component_type: String,
+}
+
+#[async_trait]
+pub trait ComponentTypeResolver: Send + Sync {
     async fn find_all_components_with_type_by_version_ids(
         &self,
         version_ids: &[u32]

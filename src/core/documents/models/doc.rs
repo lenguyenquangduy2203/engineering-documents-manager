@@ -19,7 +19,6 @@ pub struct Document {
     pub title: String,
     pub status: DocStatus,
     pub layout_version_ids: Vec<u32>,
-    pub artifact_path: Option<PathBuf>,
 }
 
 impl Document {
@@ -30,7 +29,6 @@ impl Document {
             title: title.into(),
             status: DocStatus::Draft,
             layout_version_ids: Vec::new(),
-            artifact_path: None,
         }
     }
 
@@ -46,7 +44,7 @@ impl Document {
         Ok(())
     }
 
-    pub fn finalize_publication(&mut self, file_path: PathBuf) -> anyhow::Result<()> {
+    pub fn finalize_publication(&mut self) -> anyhow::Result<()> {
         match self.status {
             DocStatus::Draft => {
                 if self.layout_version_ids.is_empty() {
@@ -54,7 +52,6 @@ impl Document {
                 }
 
                 self.status = DocStatus::Published;
-                self.artifact_path = Some(file_path);
 
                 Ok(())
             }
