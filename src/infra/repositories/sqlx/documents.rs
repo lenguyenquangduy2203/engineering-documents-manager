@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use sqlx::{Pool, Row, Sqlite, sqlite::SqliteRow};
+use chrono::Utc;
+use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 
-use crate::core::documents::{models::{ doc::{DocStatus, Document}, doc_types::DocTypes}, repositories::{DocumentLayoutsModifier, DocumentsResolver}};
+use crate::core::documents::{models::{ doc::{DocStatus, Document}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}};
 
 impl TryFrom<&str> for DocStatus {
     type Error = anyhow::Error;
@@ -47,19 +48,19 @@ impl SqliteDocumentsRepository {
     pub fn new(dbc: Arc<Pool<Sqlite>>) -> Self {
         Self { dbc }
     }
-}
 
-#[async_trait]
-impl DocumentsResolver for SqliteDocumentsRepository {
-    async fn find_doc_by_id(&self, doc_id: u32) -> anyhow::Result<Option<Document>> {
-        let opt: Option<SqliteRow> = sqlx::query(
+    async fn fetch_opt_document_row<'c, E: Executor<'c, Database = Sqlite>>(
+        doc_id: u32,
+        executor: E
+    ) -> anyhow::Result<Option<SqliteRow>> {
+        Ok(sqlx::query(
             r#"
             SELECT 
                 d.id, 
                 d.type, 
                 d.title, 
                 d.status,
-                GROUP_CONCAT(l.id) AS layout_version_ids
+                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS layout_version_ids
             FROM documents d
             LEFT JOIN document_layouts l ON d.id = l.document_id
             WHERE d.id = $1
@@ -67,13 +68,133 @@ impl DocumentsResolver for SqliteDocumentsRepository {
             "#
         )
         .bind(doc_id)
-        .fetch_optional(&*self.dbc)
-        .await?;
+        .fetch_optional(executor)
+        .await?)
+    }
+}
 
-        match opt {
+#[async_trait]
+impl DocumentsResolver for SqliteDocumentsRepository {
+    async fn find_doc_by_id(&self, doc_id: u32) -> anyhow::Result<Option<Document>> {
+        match Self::fetch_opt_document_row(doc_id, &*self.dbc).await? {
             Some(row) => Ok(Some(Document::try_from(row)?)),
             None => Ok(None),
         }
+    }
+}
+
+#[async_trait]
+impl DocumentLifecycleManager for SqliteDocumentsRepository {
+    async fn create_new(&self, document: &Document) -> anyhow::Result<u32> {
+        let res = sqlx::query!(
+            r#"
+            INSERT INTO documents (type, title, status)
+            VALUES (?, ?, ?)
+            "#,
+            serde_json::to_string(&document.doc_type)?,
+            document.title,
+            serde_json::to_string(&document.status)?,
+        )
+        .execute(&*self.dbc)
+        .await?;
+
+        Ok(res.last_insert_rowid() as u32)
+    }
+
+    async fn find_all_docs(&self, filter: DocumentFilterQuery) -> anyhow::Result<Vec<Document>> {
+        let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
+            r#"
+            SELECT
+                d.id, 
+                d.type, 
+                d.title, 
+                d.status,
+                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS layout_version_ids
+            FROM documents d
+            LEFT JOIN document_layouts l
+                ON d.id = l.document_id
+            WHERE 1=1
+            "#
+        );
+        let specs = DocumentQuery::new(filter);
+        specs.apply(&mut qb);
+        qb.push(" GROUP BY d.id ");
+        let query = qb.build();
+        let rows = query.fetch_all(&*self.dbc).await?;
+
+        rows.into_iter()
+            .map(Document::try_from)
+            .collect()
+    }
+
+    async fn update_doc(&self, incoming_document: Document) -> anyhow::Result<Option<Document>> {
+        let doc_id = incoming_document.id.ok_or_else(|| {
+            anyhow!("No id is specified for update")
+        })?;
+
+        let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
+        let row = match Self::fetch_opt_document_row(doc_id, &mut *tx).await? {
+            Some(r) => r,
+            None => return Ok(None),
+        };
+
+        let mut to_be_updated_doc = Document::try_from(row)?;
+        if !incoming_document.title.is_empty()
+        && incoming_document.title != to_be_updated_doc.title {
+            to_be_updated_doc.title = incoming_document.title;
+        }
+
+        if incoming_document.status != to_be_updated_doc.status {
+            to_be_updated_doc.status = incoming_document.status;
+        }
+
+        let is_completed = to_be_updated_doc.status == DocStatus::Published;
+        let published_at = if is_completed {
+            Some(Utc::now().format("%Y-%m-%d %H:%M:%S").to_string())
+        } else {
+            None
+        };
+
+        sqlx::query!(
+            r#"
+            UPDATE documents
+            SET
+                title = ?,
+                status = ?,
+                is_completed = ?,
+                published_at = ?
+            WHERE id = ?
+            "#,
+            to_be_updated_doc.title,
+            serde_json::to_string(&to_be_updated_doc.status)?,
+            is_completed as i32,
+            published_at,
+            doc_id,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(None)
+    }
+
+    async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<()> {
+        let res = sqlx::query!(
+            r#"
+            DELETE FROM documents
+            WHERE id = ?
+            "#,
+            doc_id
+        )
+        .execute(&*self.dbc)
+        .await?;
+
+        if res.rows_affected() == 0 {
+            return Err(anyhow!("Document with ID {} does not exist", doc_id));
+        }
+
+        Ok(())
     }
 }
 

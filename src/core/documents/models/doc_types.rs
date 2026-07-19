@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::anyhow;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -27,6 +29,22 @@ impl TryFrom<&str> for DocTypes {
             "API" => Ok(DocTypes::API(ApiDoc)),
             _ => Err(anyhow!("Unknown document type: {}", doc_type)),
         }
+    }
+}
+
+impl From<&DocTypes> for String {
+    fn from(value: &DocTypes) -> Self {
+        match value {
+            DocTypes::SDD(_) => "SDD".into(),
+            DocTypes::API(_) => "API".into(),
+        }
+    }
+}
+
+impl Display for DocTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let content: String = self.into();
+        write!(f, "{}", content)
     }
 }
 

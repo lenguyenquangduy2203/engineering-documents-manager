@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +10,22 @@ use crate::core::documents::models::doc_types::DocTypes;
 pub enum DocStatus {
     Draft,
     Published,
+}
+
+impl From<&DocStatus> for String {
+    fn from(value: &DocStatus) -> Self {
+        match value {
+            DocStatus::Draft => "DRAFT".into(),
+            DocStatus::Published => "PUBLISHED".into(),
+        }
+    }
+}
+
+impl Display for DocStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let content: String = self.into();
+        write!(f, "{}", content)
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone)]

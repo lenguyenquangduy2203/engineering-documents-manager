@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::core::documents::models::doc::{DocStatus, Document};
+use crate::core::documents::models::{doc::{DocStatus, Document}, doc_types::DocTypes};
 
 #[async_trait]
 pub trait DocumentsResolver: Send + Sync {
@@ -11,7 +11,7 @@ pub trait DocumentsResolver: Send + Sync {
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct DocumentFilterQuery {
     pub title: Option<String>,
-    pub doc_type: Option<String>,
+    pub doc_type: Option<DocTypes>,
     pub status: Option<DocStatus>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
