@@ -30,7 +30,7 @@ impl DocumentLayoutService {
 
         component_ids.sort_unstable();
         component_ids.dedup();
-
+        
         if component_ids.len() != original_len {
             return Err(anyhow!("Layout conflict: Cannot add multiple versions of the same root component to a single layout"));
         }

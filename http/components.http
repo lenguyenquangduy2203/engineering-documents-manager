@@ -1,0 +1,130 @@
+### Create a new Design Spec Component (Decision Record Subtype)
+POST http://localhost:3000/components
+Content-Type: application/json
+
+{
+    "title": "Architecture Decision: Database Migration",
+    "payload": {
+        "group": "DesignSpec",
+        "data": {
+            "type": "DecisionRecord",
+            "data": {
+                "decision": "Migrate core ledger to PostgreSQL",
+                "rationale": "We require robust native JSONB support and atomic multi-table transactions for workspace history tracking.",
+                "alternatives_considered": [
+                    "MySQL (Limited JSON optimization options)",
+                    "MongoDB (Lacks relational integrity constraints for transactional history logs)"
+                ]
+            }
+        }
+    }
+}
+
+### 
+POST http://localhost:3000/components
+Content-Type: application/json
+
+{
+    "title": "Auth Flow Sequence Diagram",
+    "payload": {
+        "group": "Schematic",
+        "data": {
+            "type": "MermaidDiagram",
+            "data": {
+                "definition": "sequenceDiagram\n    Client->>API: POST /login\n    API-->>Client: 200 OK (Token)"
+            }
+        }
+    }
+}
+
+### 
+POST http://localhost:3000/components
+Content-Type: application/json
+
+{
+    "title": "System Topology Diagram",
+    "payload": {
+        "group": "Schematic",
+        "data": {
+            "type": "ImageLink",
+            "data": {
+                "path": "/assets/diagrams/system-v2.png"
+            }
+        }
+    }
+}
+
+### 
+POST http://localhost:3000/components
+Content-Type: application/json
+
+{
+    "title": "User Registration API Reference",
+    "payload": {
+        "group": "Reference",
+        "data": {
+            "type": "ApiEndpoint",
+            "data": {
+                "endpoint": "/api/v1/users/register",
+                "method": "POST",
+                "request_body_example": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"Secret123!\"\n}"
+            }
+        }
+    }
+}
+
+###
+
+POST http://localhost:3000/components
+Content-Type: application/json
+
+{
+    "title": "Architecture Decision: Caching Strategy",
+    "payload": {
+        "group": "DesignSpec",
+        "data": {
+            "type": "DecisionRecord",
+            "data": {
+                "decision": "Use Redis for user session store",
+                "rationale": "High read/write throughput and built-in TTL support for automatic session expiration.",
+                "alternatives_considered": [
+                    "In-memory HashMap (lacks persistence across service restarts)",
+                    "PostgreSQL sessions table (unnecessary DB write load)"
+                ]
+            }
+        }
+    }
+}
+
+### Get all up-to-date components
+GET http://localhost:3000/components?group=DesignSpec
+Content-Type: application/json
+
+### Get up-to-date component by id
+GET http://localhost:3000/components/2
+Content-Type: application/json
+
+### Update component by id
+PUT http://localhost:3000/components/1
+Content-Type: application/json
+
+{
+    "title": "Architecture Decision: Database Selection",
+    "payload": {
+        "group": "DesignSpec",
+        "data": {
+            "type": "DecisionRecord",
+            "data": {
+                "decision": "Chose core ledger to SQLite",
+                "rationale": "We require robust native JSON support and atomic multi-table transactions for workspace history tracking.",
+                "alternatives_considered": [
+                    "MySQL (Limited JSON optimization options)",
+                    "MongoDB (Lacks relational integrity constraints for transactional history logs)"
+                ]
+            }
+        }
+    }
+}
+
+### Delete a component by id
+DELETE http://localhost:3000/components/1

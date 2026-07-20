@@ -17,12 +17,19 @@ pub struct DocumentFilterQuery {
     pub offset: Option<i64>,
 }
 
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct DocumentFieldsForUpdate {
+    pub id: u32,
+    pub title: Option<String>,
+    pub status: Option<DocStatus>,
+}
+
 #[async_trait]
 pub trait DocumentLifecycleManager: DocumentsResolver {
     async fn create_new(&self, document: &Document) -> anyhow::Result<u32>;
     async fn find_all_docs(&self, filter: DocumentFilterQuery) -> anyhow::Result<Vec<Document>>;
 
-    async fn update_doc(&self, incoming_document: Document) -> anyhow::Result<Option<Document>>;
+    async fn update_doc(&self, incoming_document: DocumentFieldsForUpdate) -> anyhow::Result<Option<Document>>;
     async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<()>;
 }
 

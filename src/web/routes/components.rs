@@ -90,7 +90,7 @@ async fn get_latest_component(
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct UpdateComponentRequest<T> {
+struct UpdateComponentRequest<T> {
     pub title: String,
     pub payload: T,
 }
@@ -100,14 +100,14 @@ async fn update_component_by_id(
     Path(id): Path<u32>,
     Json(request): Json<UpdateComponentRequest<ComponentPayload>>
 ) -> impl IntoResponse {
-    let to_be_updated_component = Component {
+    let incoming_component = Component {
         id: Some(id),
         title: request.title,
         version: Version::default(),
         payload: request.payload,
     };
 
-    match ctx.update_component(to_be_updated_component).await {
+    match ctx.update_component(incoming_component).await {
         Ok(opt) => match opt {
             Some(component) => (StatusCode::OK, Json(component)).into_response(),
             None => (StatusCode::NOT_FOUND, "Found no component with expected id for update").into_response(),

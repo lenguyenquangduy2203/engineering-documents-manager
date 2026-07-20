@@ -1,0 +1,31 @@
+### Creates a top-level document container.
+POST http://localhost:3000/documents
+Content-Type: application/json
+
+{
+    "doc_type": "SDD",
+    "title": "System Design v2"
+}
+
+### Update Document Layouts (Link Components to Document)
+PUT http://localhost:3000/documents/2/layouts
+Content-Type: application/json
+
+[2, 3, 5]
+
+### Get All Documents (With Query Filters)
+GET http://localhost:3000/documents?status=DRAFT
+
+### Get a Specific Document by ID
+GET http://localhost:3000/documents/2
+
+### Partially Update Document Metadata
+PATCH http://localhost:3000/documents/2
+Content-Type: application/json
+
+{
+    "title": "System Design v3 - Published"
+}
+
+### Delete Document and Its Layouts
+DELETE http://localhost:3000/documents/1

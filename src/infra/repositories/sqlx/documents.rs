@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 
-use crate::core::documents::{models::{ doc::{DocStatus, Document}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}};
+use crate::core::documents::{models::{ doc::{DocStatus, Document}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFieldsForUpdate, DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}};
 
 impl TryFrom<&str> for DocStatus {
     type Error = anyhow::Error;
@@ -91,9 +91,9 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             INSERT INTO documents (type, title, status)
             VALUES (?, ?, ?)
             "#,
-            serde_json::to_string(&document.doc_type)?,
+            &document.doc_type.to_string(),
             document.title,
-            serde_json::to_string(&document.status)?,
+            &document.status.to_string(),
         )
         .execute(&*self.dbc)
         .await?;
@@ -118,7 +118,6 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         );
         let specs = DocumentQuery::new(filter);
         specs.apply(&mut qb);
-        qb.push(" GROUP BY d.id ");
         let query = qb.build();
         let rows = query.fetch_all(&*self.dbc).await?;
 
@@ -127,11 +126,8 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             .collect()
     }
 
-    async fn update_doc(&self, incoming_document: Document) -> anyhow::Result<Option<Document>> {
-        let doc_id = incoming_document.id.ok_or_else(|| {
-            anyhow!("No id is specified for update")
-        })?;
-
+    async fn update_doc(&self, incoming_document: DocumentFieldsForUpdate) -> anyhow::Result<Option<Document>> {
+        let doc_id = incoming_document.id;
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
         let row = match Self::fetch_opt_document_row(doc_id, &mut *tx).await? {
             Some(r) => r,
@@ -139,13 +135,17 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         };
 
         let mut to_be_updated_doc = Document::try_from(row)?;
-        if !incoming_document.title.is_empty()
-        && incoming_document.title != to_be_updated_doc.title {
-            to_be_updated_doc.title = incoming_document.title;
+        if let Some(title) = incoming_document.title {
+            if !title.is_empty()
+            && title != to_be_updated_doc.title {
+                to_be_updated_doc.title = title;
+            }
         }
 
-        if incoming_document.status != to_be_updated_doc.status {
-            to_be_updated_doc.status = incoming_document.status;
+        if let Some(status) = incoming_document.status {
+            if status != to_be_updated_doc.status {
+                to_be_updated_doc.status = status;
+            }
         }
 
         let is_completed = to_be_updated_doc.status == DocStatus::Published;
@@ -166,7 +166,7 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             WHERE id = ?
             "#,
             to_be_updated_doc.title,
-            serde_json::to_string(&to_be_updated_doc.status)?,
+            &to_be_updated_doc.status.to_string(),
             is_completed as i32,
             published_at,
             doc_id,
@@ -176,7 +176,7 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
 
         tx.commit().await?;
 
-        Ok(None)
+        Ok(Some(to_be_updated_doc))
     }
 
     async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<()> {

@@ -1,0 +1,143 @@
+use std::{sync::Arc};
+
+use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, patch, post, put}};
+use serde::{Deserialize, Serialize};
+
+use crate::{core::{applications::services::update_document_layouts::DocumentLayoutService, components::repositories::ComponentTypeResolver, documents::{models::{doc::{DocStatus, Document}, doc_types::DocTypes}, repositories::{DocumentFieldsForUpdate, DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}}}, web::routes::context::Context};
+
+pub fn build() -> Router<Context> {
+    Router::new()
+        .route("/documents", post(add_new_document))
+        .route("/documents", get(get_all_documents_with_layouts_order))
+        .route("/documents/{id}", get(get_document_with_layouts_by_id))
+        .route("/documents/{id}", patch(partially_update_document_by_id))
+        .route("/documents/{id}", delete(remove_document_by_id))
+        .route("/documents/{id}/layouts", put(update_document_layouts_by_id))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateDocRequest {
+    pub doc_type: DocTypes,
+    pub title: String,
+}
+
+impl From<CreateDocRequest> for Document {
+    fn from(req: CreateDocRequest) -> Self {
+        Self::new(req.doc_type, &req.title)
+    }
+}
+
+#[derive(Serialize)]
+struct CreatedResponse {
+    id: u32,
+}
+
+async fn add_new_document(
+    State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,
+    Json(req): Json<CreateDocRequest>
+) -> impl IntoResponse {
+    match document_lifecycle_manager.create_new(&Document::from(req)).await {
+        Ok(generated_id) => (
+                StatusCode::CREATED, 
+                Json(CreatedResponse { id: generated_id })
+            ).into_response(),
+        Err(err) => {
+            tracing::warn!("Database document insert execution failed: {:?}", err);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR, 
+                "Failed to register document changes to the workspace history ledger."
+            ).into_response()
+        },
+    }
+}
+
+async fn get_all_documents_with_layouts_order(
+    State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,
+    Query(filter): Query<DocumentFilterQuery>
+) -> impl IntoResponse {
+    match document_lifecycle_manager.find_all_docs(filter).await {
+        Ok(documents) => (StatusCode::OK, Json(documents)).into_response(),
+        Err(err) => {
+            tracing::warn!("Failed to filter document workspace: {:?}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read documents").into_response()
+        },
+    }
+}
+
+async fn get_document_with_layouts_by_id(
+    State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,
+    Path(id): Path<u32>
+) -> impl IntoResponse {
+    match document_lifecycle_manager.find_doc_by_id(id).await {
+        Ok(Some(document)) => (StatusCode::OK, Json(document)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "Found no document with expected id").into_response(),
+        Err(err) => {
+            tracing::warn!("Failed to find document with id={:?}: {:?}", id, err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to find document").into_response()
+        },
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UpdateDocRequest {
+    pub title: Option<String>,
+    pub status: Option<DocStatus>,
+}
+
+async fn partially_update_document_by_id(
+    State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,
+    Path(id): Path<u32>,
+    Json(request): Json<UpdateDocRequest>
+) -> impl IntoResponse {
+    let incoming_document = DocumentFieldsForUpdate { 
+        id, 
+        title: request.title, 
+        status: request.status
+    };
+
+    match document_lifecycle_manager.update_doc(incoming_document).await {
+        Ok(Some(doc)) => (StatusCode::OK, Json(doc)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "Found no document with expected id for update").into_response(),
+        Err(err) => {
+            tracing::warn!("Failed to update document with id={:?}: {:?}", id, err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update document").into_response()
+        },
+    }
+}
+
+async fn remove_document_by_id(
+    State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,
+    Path(id): Path<u32>
+) -> impl IntoResponse {
+    match document_lifecycle_manager.remove_doc_with_all_layouts_by_id(id).await {
+        Ok(_) => (StatusCode::NO_CONTENT).into_response(),
+        Err(err) => {
+            tracing::warn!("{}", err.to_string());
+            (StatusCode::NOT_FOUND, err.to_string()).into_response()
+        },
+    }
+}
+
+async fn update_document_layouts_by_id(
+    State(documents_resolver): State<Arc<dyn DocumentsResolver>>,
+    State(component_type_resolver): State<Arc<dyn ComponentTypeResolver>>,
+    State(document_layouts_modifier): State<Arc<dyn DocumentLayoutsModifier>>,
+    Path(id): Path<u32>,
+    Json(version_ids): Json<Vec<u32>>
+) -> impl IntoResponse {
+    match DocumentLayoutService::update_layouts(
+        documents_resolver.as_ref(), 
+        component_type_resolver.as_ref(), 
+        document_layouts_modifier.as_ref(), 
+        id, 
+        &version_ids
+    ).await {
+        Ok(_) => (StatusCode::NO_CONTENT).into_response(),
+        Err(err) => {
+            tracing::warn!("Failed to update document layouts with id={:?}: {:?}", id, err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update document layouts").into_response()
+        },
+    }
+}

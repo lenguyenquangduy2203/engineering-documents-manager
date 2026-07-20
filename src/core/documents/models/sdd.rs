@@ -3,6 +3,8 @@ pub struct SystemDesignDoc;
 
 impl SystemDesignDoc {
     pub fn is_allowed(&self, component_type: &str) -> bool {
-        matches!(component_type, "DesignSpec" | "Schematic")
+        ["DesignSpec", "Schematic"]
+            .iter()
+            .any(|prefix| component_type.starts_with(prefix))
     }
 }

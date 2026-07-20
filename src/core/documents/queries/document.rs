@@ -40,6 +40,7 @@ impl DocumentQuery {
             spec.apply(builder);
         }
 
+        builder.push(" GROUP BY d.id ");
         builder.push(" LIMIT ");
         builder.push_bind(self.limit);
         builder.push(" OFFSET ");
