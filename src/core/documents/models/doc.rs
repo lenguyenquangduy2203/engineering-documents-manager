@@ -28,6 +28,12 @@ impl Display for DocStatus {
     }
 }
 
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct DocumentMetadataForUpdate {
+    pub id: u32,
+    pub title: Option<String>,
+}
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Document {
     pub id: Option<u32>,
@@ -46,6 +52,22 @@ impl Document {
             status: DocStatus::Draft,
             layout_version_ids: Vec::new(),
         }
+    }
+
+    pub fn apply_metadata_changes(
+        &mut self,
+        incoming_document: DocumentMetadataForUpdate,
+    ) -> anyhow::Result<()> {
+        if let Some(new_title) = incoming_document.title {
+            let trimmed = new_title.trim();
+            if trimmed.is_empty() {
+                return Err(anyhow!("Document title cannot be empty."));
+            }
+
+            self.title = trimmed.to_string();
+        }
+
+        Ok(())
     }
 
     pub fn update_layout(&mut self, new_version_ids: Vec<u32>) -> anyhow::Result<()> {

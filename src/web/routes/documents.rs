@@ -3,7 +3,7 @@ use std::{sync::Arc};
 use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, patch, post, put}};
 use serde::{Deserialize, Serialize};
 
-use crate::{core::{applications::services::update_document_layouts::DocumentLayoutService, components::repositories::ComponentTypeResolver, documents::{models::{doc::{DocStatus, Document}, doc_types::DocTypes}, repositories::{DocumentFieldsForUpdate, DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}}}, web::routes::context::Context};
+use crate::{core::{applications::services::update_document_layouts::DocumentLayoutService, components::repositories::ComponentTypeResolver, documents::{models::{doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}}}, web::routes::context::Context};
 
 pub fn build() -> Router<Context> {
     Router::new()
@@ -83,7 +83,6 @@ async fn get_document_with_layouts_by_id(
 #[serde(deny_unknown_fields)]
 struct UpdateDocRequest {
     pub title: Option<String>,
-    pub status: Option<DocStatus>,
 }
 
 async fn partially_update_document_by_id(
@@ -91,10 +90,9 @@ async fn partially_update_document_by_id(
     Path(id): Path<u32>,
     Json(request): Json<UpdateDocRequest>
 ) -> impl IntoResponse {
-    let incoming_document = DocumentFieldsForUpdate { 
+    let incoming_document = DocumentMetadataForUpdate { 
         id, 
-        title: request.title, 
-        status: request.status
+        title: request.title,
     };
 
     match document_lifecycle_manager.update_doc(incoming_document).await {
@@ -127,13 +125,13 @@ async fn update_document_layouts_by_id(
     Path(id): Path<u32>,
     Json(version_ids): Json<Vec<u32>>
 ) -> impl IntoResponse {
-    match DocumentLayoutService::update_layouts(
+    let deps = (
         documents_resolver.as_ref(), 
         component_type_resolver.as_ref(), 
-        document_layouts_modifier.as_ref(), 
-        id, 
-        &version_ids
-    ).await {
+        document_layouts_modifier.as_ref()
+    );
+
+    match DocumentLayoutService::update_layouts(deps, id, &version_ids).await {
         Ok(_) => (StatusCode::NO_CONTENT).into_response(),
         Err(err) => {
             tracing::warn!("Failed to update document layouts with id={:?}: {:?}", id, err);

@@ -2,18 +2,21 @@ use anyhow::anyhow;
 
 use crate::core::{components::repositories::ComponentTypeResolver, documents::repositories::{DocumentLayoutsModifier, DocumentsResolver}};
 
+type DocumentLayoutServiceDepsTuple<'a> = (
+    &'a dyn DocumentsResolver,
+    &'a dyn ComponentTypeResolver,
+    &'a dyn DocumentLayoutsModifier,
+);
 
 pub struct DocumentLayoutService;
 
 impl DocumentLayoutService {
     pub async fn update_layouts(
-        documents_resolver: &dyn DocumentsResolver,
-        component_type_resolver: &dyn ComponentTypeResolver,
-        document_layouts_modifier: &dyn DocumentLayoutsModifier,
+        (documents_resolver, component_type_resolver, document_layouts_modifier): DocumentLayoutServiceDepsTuple<'_>,
         doc_id: u32,
         version_ids: &[u32],
     ) -> anyhow::Result<()> {
-        let doc = documents_resolver.find_doc_by_id(doc_id).await?
+        let mut doc = documents_resolver.find_doc_by_id(doc_id).await?
             .ok_or_else(|| anyhow!("Document not found"))?;
         let component_refs = component_type_resolver.find_all_components_with_type_by_version_ids(version_ids).await?;
 
@@ -43,7 +46,8 @@ impl DocumentLayoutService {
             return Err(anyhow!("Document type mismatch: One or more component layouts are barred from this document type"));
         }
 
-        document_layouts_modifier.replace_layouts(doc_id, version_ids).await?;
+        doc.update_layout(version_ids.to_vec())?;
+        document_layouts_modifier.replace_layouts(doc_id, &doc.layout_version_ids).await?;
 
         Ok(())
     }

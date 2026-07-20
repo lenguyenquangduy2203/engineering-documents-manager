@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use chrono::Utc;
 use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 
-use crate::core::documents::{models::{ doc::{DocStatus, Document}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFieldsForUpdate, DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}};
+use crate::core::documents::{models::{ doc::{DocStatus, Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}};
 
 impl TryFrom<&str> for DocStatus {
     type Error = anyhow::Error;
@@ -126,7 +125,7 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             .collect()
     }
 
-    async fn update_doc(&self, incoming_document: DocumentFieldsForUpdate) -> anyhow::Result<Option<Document>> {
+    async fn update_doc(&self, incoming_document: DocumentMetadataForUpdate) -> anyhow::Result<Option<Document>> {
         let doc_id = incoming_document.id;
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
         let row = match Self::fetch_opt_document_row(doc_id, &mut *tx).await? {
@@ -135,40 +134,16 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         };
 
         let mut to_be_updated_doc = Document::try_from(row)?;
-        if let Some(title) = incoming_document.title {
-            if !title.is_empty()
-            && title != to_be_updated_doc.title {
-                to_be_updated_doc.title = title;
-            }
-        }
-
-        if let Some(status) = incoming_document.status {
-            if status != to_be_updated_doc.status {
-                to_be_updated_doc.status = status;
-            }
-        }
-
-        let is_completed = to_be_updated_doc.status == DocStatus::Published;
-        let published_at = if is_completed {
-            Some(Utc::now().format("%Y-%m-%d %H:%M:%S").to_string())
-        } else {
-            None
-        };
+        to_be_updated_doc.apply_metadata_changes(incoming_document)?;
 
         sqlx::query!(
             r#"
             UPDATE documents
             SET
-                title = ?,
-                status = ?,
-                is_completed = ?,
-                published_at = ?
+                title = ?
             WHERE id = ?
             "#,
             to_be_updated_doc.title,
-            &to_be_updated_doc.status.to_string(),
-            is_completed as i32,
-            published_at,
             doc_id,
         )
         .execute(&mut *tx)
