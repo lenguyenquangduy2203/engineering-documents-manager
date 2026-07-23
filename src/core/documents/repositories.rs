@@ -30,3 +30,8 @@ pub trait DocumentLifecycleManager: DocumentsResolver {
 pub trait DocumentLayoutsModifier: Send + Sync {
     async fn replace_layouts(&self, doc_id: u32, version_ids: &[u32]) -> anyhow::Result<()>;
 }
+
+#[async_trait]
+pub trait DocumentPublisher: Send + Sync {
+    async fn publish_doc(&self, doc_id: u32) -> anyhow::Result<Option<Document>>;
+}

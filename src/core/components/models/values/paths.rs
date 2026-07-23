@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(transparent)]
-pub struct ApiPath(String);
+pub struct ApiPath(pub String);
 
 impl<'de> Deserialize<'de> for ApiPath {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -22,7 +22,7 @@ impl<'de> Deserialize<'de> for ApiPath {
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(transparent)]
-pub struct AssetPath(String);
+pub struct AssetPath(pub String);
 
 impl<'de> Deserialize<'de> for AssetPath {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
