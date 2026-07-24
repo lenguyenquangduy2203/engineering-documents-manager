@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use anyhow::anyhow;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::core::documents::models::doc_types::DocTypes;
@@ -9,14 +10,18 @@ use crate::core::documents::models::doc_types::DocTypes;
 #[serde(rename_all = "UPPERCASE")]
 pub enum DocStatus {
     Draft,
+    Publishing,
     Published,
+    Failed,
 }
 
 impl From<&DocStatus> for String {
     fn from(value: &DocStatus) -> Self {
         match value {
             DocStatus::Draft => "DRAFT".into(),
+            DocStatus::Publishing => "PUBLISHING".into(),
             DocStatus::Published => "PUBLISHED".into(),
+            DocStatus::Failed => "FAILED".into(),
         }
     }
 }
@@ -82,18 +87,39 @@ impl Document {
         Ok(())
     }
 
-    pub fn finalize_publication(&mut self) -> anyhow::Result<()> {
+    pub fn marked_for_publishing(&mut self) -> anyhow::Result<()> {
         match self.status {
-            DocStatus::Draft => {
+            DocStatus::Draft | DocStatus::Failed => {
+                if self.layout_version_ids.is_empty() {
+                    return Err(anyhow!("Cannot publish an empty document."));
+                }
+
+                self.status = DocStatus::Publishing;
+
+                Ok(())
+            }
+            DocStatus::Publishing | DocStatus::Published => {
+                Err(anyhow!("Only draft document can be marked for publishing"))
+            }
+        }
+    }
+
+    pub fn finalize_publication(&mut self) -> anyhow::Result<DateTime<Utc>> {
+        match self.status {
+            DocStatus::Draft | DocStatus::Publishing | DocStatus::Failed => {
                 if self.layout_version_ids.is_empty() {
                     return Err(anyhow!("Cannot publish an empty document."));
                 }
 
                 self.status = DocStatus::Published;
 
-                Ok(())
+                Ok(Utc::now())
             }
             DocStatus::Published => Err(anyhow!("Document has already been published")),
         }
+    }
+
+    pub fn forced_failed(&mut self) -> () {
+        self.status = DocStatus::Failed;
     }
 }
