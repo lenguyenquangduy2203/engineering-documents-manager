@@ -15,6 +15,44 @@ pub enum DocStatus {
     Failed,
 }
 
+impl DocStatus {
+    /// Validates and returns the next status when initiating a publish operation
+    pub fn transition_to_publishing(self) -> anyhow::Result<Self> {
+        match self {
+            DocStatus::Draft | DocStatus::Failed => Ok(DocStatus::Publishing),
+            DocStatus::Publishing => {
+                Err(anyhow!("Document is already in the process of publishing."))
+            }
+            DocStatus::Published => Err(anyhow!("Published documents cannot re-enter publishing.")),
+        }
+    }
+
+    /// Validates and returns the next status when finalizing a publish operation
+    pub fn transition_to_published(self) -> anyhow::Result<Self> {
+        match self {
+            DocStatus::Publishing | DocStatus::Draft => Ok(DocStatus::Published),
+            DocStatus::Published => Err(anyhow!("Document is already published.")),
+            DocStatus::Failed => Err(anyhow!(
+                "Cannot directly finalize a failed document without restarting publish."
+            )),
+        }
+    }
+
+    /// Validates and returns the next status when a failure occurs
+    pub fn transition_to_failed(self) -> anyhow::Result<Self> {
+        match self {
+            DocStatus::Publishing => Ok(DocStatus::Failed),
+            DocStatus::Draft | DocStatus::Published | DocStatus::Failed => {
+                Err(anyhow!("Cannot transition to Failed from state {:?}", self))
+            }
+        }
+    }
+
+    pub fn can_modify_layout(self) -> bool {
+        matches!(self, DocStatus::Draft | DocStatus::Failed)
+    }
+}
+
 impl From<&DocStatus> for String {
     fn from(value: &DocStatus) -> Self {
         match value {
@@ -76,9 +114,10 @@ impl Document {
     }
 
     pub fn update_layout(&mut self, new_version_ids: Vec<u32>) -> anyhow::Result<()> {
-        if self.status == DocStatus::Published {
+        if !self.status.can_modify_layout() {
             return Err(anyhow!(
-                "Cannot alter the structural layout of a published document."
+                "Cannot alter layout while document is in '{}' state.",
+                self.status
             ));
         }
 
@@ -88,38 +127,28 @@ impl Document {
     }
 
     pub fn marked_for_publishing(&mut self) -> anyhow::Result<()> {
-        match self.status {
-            DocStatus::Draft | DocStatus::Failed => {
-                if self.layout_version_ids.is_empty() {
-                    return Err(anyhow!("Cannot publish an empty document."));
-                }
-
-                self.status = DocStatus::Publishing;
-
-                Ok(())
-            }
-            DocStatus::Publishing | DocStatus::Published => {
-                Err(anyhow!("Only draft document can be marked for publishing"))
-            }
+        if self.layout_version_ids.is_empty() {
+            return Err(anyhow!("Cannot publish an empty document layout."));
         }
+
+        self.status = self.status.transition_to_publishing()?;
+
+        Ok(())
     }
 
     pub fn finalize_publication(&mut self) -> anyhow::Result<DateTime<Utc>> {
-        match self.status {
-            DocStatus::Draft | DocStatus::Publishing | DocStatus::Failed => {
-                if self.layout_version_ids.is_empty() {
-                    return Err(anyhow!("Cannot publish an empty document."));
-                }
-
-                self.status = DocStatus::Published;
-
-                Ok(Utc::now())
-            }
-            DocStatus::Published => Err(anyhow!("Document has already been published")),
+        if self.layout_version_ids.is_empty() {
+            return Err(anyhow!("Cannot publish an empty document layout."));
         }
+
+        self.status = self.status.transition_to_published()?;
+
+        Ok(Utc::now())
     }
 
-    pub fn forced_failed(&mut self) -> () {
-        self.status = DocStatus::Failed;
+    pub fn mark_failed(&mut self) -> anyhow::Result<()> {
+        self.status = self.status.transition_to_failed()?;
+
+        Ok(())
     }
 }

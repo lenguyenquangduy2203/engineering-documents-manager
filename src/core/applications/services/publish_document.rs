@@ -45,7 +45,15 @@ impl DocumentPublishingService {
                 }
                 Err(err) => {
                     tracing::error!(target: "publishing", error = %err, doc_id = doc_id, "Background publish failed");
-                    document.forced_failed();
+                    if let Err(transition_err) = document.mark_failed() {
+                        tracing::error!(
+                            doc_id = doc_id, 
+                            error = %transition_err, 
+                            "Failed to transition document state to Failed"
+                        );
+
+                        return; // Prevent updating DB with an invalid state
+                    }
                     // Cleanup / revert status back to Draft/Failed so the user can try again
                     if let Err(revert_err) = document_publisher.update_doc_publication(DocumentPublishParams { 
                         id: doc_id, 
@@ -75,9 +83,9 @@ impl DocumentPublishingService {
             .collect::<anyhow::Result<Vec<String>>>()?
             .join("\n");
 
-        let published_at = document.finalize_publication()?;
-
         tokio::fs::write(format!("./exports/doc_{}.md", doc_id), raw).await?;
+        
+        let published_at = document.finalize_publication()?;
 
         document_publisher.update_doc_publication(DocumentPublishParams {
             id: doc_id, 
