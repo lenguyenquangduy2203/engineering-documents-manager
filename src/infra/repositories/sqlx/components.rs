@@ -286,7 +286,7 @@ impl ComponentPayloadResolver for SqliteComponentRepository {
             SELECT 
                 c.id AS component_id, 
                 v.id AS version_id,
-                c.data AS payload
+                v.data AS payload
             FROM components c
             LEFT JOIN component_versions v ON c.id = v.component_id
             WHERE v.id IN (SELECT value FROM json_each($1))

@@ -3,7 +3,7 @@ use std::{sync::Arc};
 use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, patch, post, put}};
 use serde::{Deserialize, Serialize};
 
-use crate::{core::{applications::services::update_document_layouts::DocumentLayoutService, components::repositories::ComponentTypeResolver, documents::{models::{doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentsResolver}}}, web::routes::context::Context};
+use crate::{core::{applications::services::{publish_document::DocumentPublishingService, update_document_layouts::DocumentLayoutService}, components::repositories::{ComponentPayloadResolver, ComponentTypeResolver}, documents::{models::{doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublisher, DocumentsResolver}}}, web::routes::context::Context};
 
 pub fn build() -> Router<Context> {
     Router::new()
@@ -13,6 +13,7 @@ pub fn build() -> Router<Context> {
         .route("/documents/{id}", patch(partially_update_document_by_id))
         .route("/documents/{id}", delete(remove_document_by_id))
         .route("/documents/{id}/layouts", put(update_document_layouts_by_id))
+        .route("/documents/{id}/publish", post(publish_document_by_id))
 }
 
 #[derive(Deserialize)]
@@ -136,6 +137,27 @@ async fn update_document_layouts_by_id(
         Err(err) => {
             tracing::warn!("Failed to update document layouts with id={:?}: {:?}", id, err);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update document layouts").into_response()
+        },
+    }
+}
+
+async fn publish_document_by_id(
+    State(documents_resolver): State<Arc<dyn DocumentsResolver>>,
+    State(component_payload_resolver): State<Arc<dyn ComponentPayloadResolver>>,
+    State(document_publisher): State<Arc<dyn DocumentPublisher>>,
+    Path(id): Path<u32>
+) -> impl IntoResponse {
+    let deps = (
+        documents_resolver.clone(),
+        component_payload_resolver.clone(),
+        document_publisher.clone(),
+    );
+
+    match DocumentPublishingService::publish_document(deps, id).await {
+        Ok(_) => (StatusCode::ACCEPTED).into_response(),
+        Err(err) => {
+            tracing::warn!("Failed to accept document publishing request for document with id={:?}: {:?}", id, err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to accept publishing document").into_response()
         },
     }
 }

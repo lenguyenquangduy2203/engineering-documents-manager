@@ -83,7 +83,7 @@ impl DocumentPublishingService {
             .collect::<anyhow::Result<Vec<String>>>()?
             .join("\n");
 
-        tokio::fs::write(format!("./exports/doc_{}.md", doc_id), raw).await?;
+        tokio::fs::write(format!("./export/doc_{}.md", doc_id), raw).await?;
         
         let published_at = document.finalize_publication()?;
 

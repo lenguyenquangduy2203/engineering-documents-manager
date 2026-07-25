@@ -16,7 +16,9 @@ pub async fn build() -> anyhow::Result<Router> {
     
     let ctx = Context::new(
         component_repository.clone(),
+        component_repository.clone(),
         component_repository,
+        document_repository.clone(),
         document_repository.clone(),
         document_repository.clone(),
         document_repository

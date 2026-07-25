@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ### Update Document Layouts (Link Components to Document)
-PUT http://localhost:3000/documents/2/layouts
+PUT http://localhost:3000/documents/4/layouts
 Content-Type: application/json
 
 [2, 3, 5]
@@ -17,7 +17,7 @@ Content-Type: application/json
 GET http://localhost:3000/documents?status=DRAFT
 
 ### Get a Specific Document by ID
-GET http://localhost:3000/documents/2
+GET http://localhost:3000/documents/4
 
 ### Partially Update Document Metadata
 PATCH http://localhost:3000/documents/2
@@ -28,4 +28,7 @@ Content-Type: application/json
 }
 
 ### Delete Document and Its Layouts
-DELETE http://localhost:3000/documents/1
+DELETE http://localhost:3000/documents/3
+
+### Publish a Document
+POST http://localhost:3000/documents/4/publish
