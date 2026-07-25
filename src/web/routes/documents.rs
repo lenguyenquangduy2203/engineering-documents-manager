@@ -3,7 +3,7 @@ use std::{sync::Arc};
 use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, patch, post, put}};
 use serde::{Deserialize, Serialize};
 
-use crate::{core::{applications::services::{publish_document::DocumentPublishingService, update_document_layouts::DocumentLayoutService}, components::repositories::{ComponentPayloadResolver, ComponentTypeResolver}, documents::{models::{doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublisher, DocumentsResolver}}}, web::routes::context::Context};
+use crate::{core::{applications::services::{publish_document::DocumentPublishingService, update_document_layouts::DocumentLayoutService}, components::repositories::{ComponentPayloadResolver, ComponentTypeResolver}, documents::{models::{doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublisher, DocumentsResolver}}}, infra::rendering::services::DocumentExportService, web::routes::context::Context};
 
 pub fn build() -> Router<Context> {
     Router::new()
@@ -145,12 +145,14 @@ async fn publish_document_by_id(
     State(documents_resolver): State<Arc<dyn DocumentsResolver>>,
     State(component_payload_resolver): State<Arc<dyn ComponentPayloadResolver>>,
     State(document_publisher): State<Arc<dyn DocumentPublisher>>,
+    State(document_export_service): State<Arc<dyn DocumentExportService>>,
     Path(id): Path<u32>
 ) -> impl IntoResponse {
     let deps = (
         documents_resolver.clone(),
         component_payload_resolver.clone(),
         document_publisher.clone(),
+        document_export_service.clone(),
     );
 
     match DocumentPublishingService::publish_document(deps, id).await {

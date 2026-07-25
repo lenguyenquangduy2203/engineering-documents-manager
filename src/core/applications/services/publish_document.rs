@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::anyhow;
 
 use crate::{core::{
-    components::repositories::ComponentPayloadResolver, documents::{models::doc::Document, repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}},
-}, infra::rendering::services::MarkdownRenderService};
+    components::{models::payload::ComponentPayload, repositories::ComponentPayloadResolver}, documents::{models::doc::Document, repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}},
+}, infra::rendering::services::{DocumentExportService}};
 
 pub struct DocumentPublishingService;
 
@@ -12,11 +12,15 @@ type DocumentPublishingServiceDepsTuple = (
     Arc<dyn DocumentsResolver>,
     Arc<dyn ComponentPayloadResolver>,
     Arc<dyn DocumentPublisher>,
+    Arc<dyn DocumentExportService>,
 );
 
 impl DocumentPublishingService {
     pub async fn publish_document(
-        (documents_resolver, component_payload_resolver, document_publisher): DocumentPublishingServiceDepsTuple,
+        (
+            documents_resolver, component_payload_resolver, 
+            document_publisher, document_export_service
+        ): DocumentPublishingServiceDepsTuple,
         doc_id: u32,
     ) -> anyhow::Result<()> {
         let mut document = documents_resolver.find_doc_by_id(doc_id).await?
@@ -32,11 +36,13 @@ impl DocumentPublishingService {
 
         let component_payload_resolver = Arc::clone(&component_payload_resolver);
         let document_publisher = Arc::clone(&document_publisher);
+        let document_export_service = Arc::clone(&document_export_service);
 
         tokio::spawn(async move {
             match Self::execute_publish_task(
                 component_payload_resolver.as_ref(),
-                document_publisher.as_ref(), 
+                document_publisher.as_ref(),
+                document_export_service.as_ref(), 
                 doc_id,
                 &mut document
             ).await {
@@ -72,20 +78,19 @@ impl DocumentPublishingService {
     async fn execute_publish_task(
         component_payload_resolver: &dyn ComponentPayloadResolver,
         document_publisher: &dyn DocumentPublisher,
+        export_service: &dyn DocumentExportService,
         doc_id: u32,
         document: &mut Document,
     ) -> anyhow::Result<()> {
-        let components = component_payload_resolver
-            .find_all_components_with_payload_by_version_ids(&document.layout_version_ids).await?;
-        
-        let raw = components.iter()
-            .map(|c| MarkdownRenderService::render_component(&c.payload))
-            .collect::<anyhow::Result<Vec<String>>>()?
-            .join("\n");
-
-        tokio::fs::write(format!("./export/doc_{}.md", doc_id), raw).await?;
+        let payloads: Vec<ComponentPayload> = component_payload_resolver
+            .find_all_components_with_payload_by_version_ids(&document.layout_version_ids).await?
+            .into_iter()
+            .map(|c| c.payload)
+            .collect();
         
         let published_at = document.finalize_publication()?;
+
+        export_service.render_and_save(document, &payloads).await?;
 
         document_publisher.update_doc_publication(DocumentPublishParams {
             id: doc_id, 

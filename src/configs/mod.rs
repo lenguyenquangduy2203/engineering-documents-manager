@@ -10,6 +10,7 @@ pub struct Config {
     host: String,
     port: String,
     db_url: String,
+    export_dir: String,
 }
 
 static ENV: OnceLock<Config> = OnceLock::new();
@@ -23,8 +24,14 @@ impl Config {
             let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
             let db_url =
                 env::var("DB_URL").unwrap_or_else(|_| "sqlite://data/database.db".to_string());
+            let export_dir = env::var("EXPORT_DIR").unwrap_or_else(|_| "./export".to_string());
 
-            Self { host, port, db_url }
+            Self {
+                host,
+                port,
+                db_url,
+                export_dir,
+            }
         })
     }
 }
@@ -32,6 +39,10 @@ impl Config {
 impl ServerConfig for Config {
     fn get_addr(&self) -> String {
         format!("{}:{}", self.host, self.port)
+    }
+
+    fn get_export_dir(&self) -> &str {
+        &self.export_dir
     }
 }
 
