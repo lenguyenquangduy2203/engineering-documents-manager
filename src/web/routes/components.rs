@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, post, put}};
 use serde::{Deserialize, Serialize};
-use crate::{core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, repositories::{ComponentFilterQuery, ComponentsRepository}}, web::routes::context::Context};
+use crate::{core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, repositories::{ComponentFilterQuery, ComponentsRepository, UpdateComponentError}}, web::routes::context::Context};
 
 pub fn build() -> Router<Context> {
     Router::new()
@@ -101,21 +101,27 @@ async fn update_component_by_id(
     Json(request): Json<UpdateComponentRequest<ComponentPayload>>
 ) -> impl IntoResponse {
     let incoming_component = Component {
-        id: Some(id),
+        id: None,
         title: request.title,
         version: Version::default(),
         payload: request.payload,
     };
 
-    match ctx.update_component(incoming_component).await {
-        Ok(opt) => match opt {
-            Some(component) => (StatusCode::OK, Json(component)).into_response(),
-            None => (StatusCode::NOT_FOUND, "Found no component with expected id for update").into_response(),
-        },
+    match ctx.update_component(id, incoming_component).await {
+        Ok(Some(component)) => (StatusCode::OK, Json(component)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "Component not found").into_response(),
+        
+        // 403 Forbidden for business domain rules
+        Err(UpdateComponentError::Domain(err)) => (
+            StatusCode::FORBIDDEN, 
+            err.to_string()
+        ).into_response(),
+        
+        // 500 for any DB or internal system failure
         Err(err) => {
-            tracing::warn!("Failed to update component with id={:?}: {:?}", id, err);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update component").into_response()
-        },
+            tracing::error!(error = %err, id = id, "Failed to update component");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+        }
     }
 }
 
@@ -124,10 +130,17 @@ async fn remove_component_by_id(
     Path(id): Path<u32>
 ) -> impl IntoResponse {
     match ctx.remove_component_with_all_versions_by_id(id).await {
-        Ok(_) => (StatusCode::NO_CONTENT).into_response(),
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND, 
+            format!("Component with ID {id} does not exist")
+        ).into_response(),
         Err(err) => {
-            tracing::warn!("{}", err.to_string());
-            (StatusCode::NOT_FOUND, err.to_string()).into_response()
-        },
+            tracing::error!(error = %err, id = id, "Failed to delete component");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR, 
+                "Internal server error"
+            ).into_response()
+        }
     }
 }

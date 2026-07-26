@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{sync::Arc, result::Result};
 
-use anyhow::{Ok, anyhow};
+use anyhow::Ok;
 use async_trait::async_trait;
 use serde_json::Value;
 use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, Transaction, sqlite::SqliteRow};
 
-use crate::core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentPayloadRef, ComponentPayloadResolver, ComponentRef, ComponentTypeResolver, ComponentsRepository}};
+use crate::core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentPayloadRef, ComponentPayloadResolver, ComponentRef, ComponentTypeResolver, ComponentsRepository, RemoveComponentError, UpdateComponentError}};
 
 impl TryFrom<SqliteRow> for Component<ComponentPayload> {
     type Error = anyhow::Error;
@@ -137,21 +137,19 @@ impl ComponentsRepository for SqliteComponentRepository {
 
     async fn update_component(
         &self, 
+        component_id: u32,
         incoming_component: Component<ComponentPayload>
-    ) -> anyhow::Result<Option<Component<ComponentPayload>>> {
-        let component_id = incoming_component.id.ok_or_else(|| {
-            anyhow!("No id is specified for update")
-        })?;
-
+    ) -> std::result::Result<Option<Component<ComponentPayload>>, UpdateComponentError> {
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
         let row = match Self::fetch_opt_component_row(component_id, &mut *tx).await? {
             Some(r) => r,
-            None => return Ok(None),
+            None => return Result::Ok(None),
         };
 
         let current_component = Component::try_from(row)?;
         let updated_component = current_component.apply_changes(incoming_component)?;
-        let updated_payload_value = serde_json::to_value(&updated_component.payload)?;
+        let updated_payload_value = serde_json::to_value(&updated_component.payload)
+            .map_err(|e| anyhow::anyhow!("Serialization failed: {e}"))?;
 
         sqlx::query!(
             r#"
@@ -176,10 +174,13 @@ impl ComponentsRepository for SqliteComponentRepository {
 
         tx.commit().await?;
 
-        Ok(Some(updated_component))
+        Result::Ok(Some(updated_component))
     }
 
-    async fn remove_component_with_all_versions_by_id(&self, component_id: u32) -> anyhow::Result<()> {
+    async fn remove_component_with_all_versions_by_id(
+        &self, 
+        component_id: u32
+    ) -> std::result::Result<bool, RemoveComponentError> {
         let mut tx = self.dbc.begin().await?;
         sqlx::query!(
             r#"
@@ -202,12 +203,12 @@ impl ComponentsRepository for SqliteComponentRepository {
         .await?;
 
         if res.rows_affected() == 0 {
-            return Err(anyhow!("Component with ID {} does not exist", component_id));
+            return Result::Ok(false);
         }
 
         tx.commit().await?;
 
-        Ok(())
+        Result::Ok(true)
     }
 }
 
