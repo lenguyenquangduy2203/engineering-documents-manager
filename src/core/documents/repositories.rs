@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use thiserror::Error;
 
-use crate::core::documents::models::{doc::{DocStatus, Document, DocumentMetadataForUpdate}, doc_types::DocTypes};
+use crate::core::documents::models::{doc::{DocStatus, Document, DocumentMetadataError, DocumentMetadataForUpdate}, doc_types::DocTypes};
 
 #[async_trait]
 pub trait DocumentsResolver: Send + Sync {
@@ -18,13 +19,25 @@ pub struct DocumentFilterQuery {
     pub offset: Option<i64>,
 }
 
+#[derive(Debug, Error)]
+pub enum DocumentUpdateError {
+    #[error(transparent)]
+    Domain(#[from] DocumentMetadataError),
+
+    #[error("Database failure: {0}")]
+    Database(#[from] sqlx::Error),
+
+    #[error(transparent)]
+    Internal(#[from] anyhow::Error),
+}
+
 #[async_trait]
 pub trait DocumentLifecycleManager: DocumentsResolver {
     async fn create_new(&self, document: &Document) -> anyhow::Result<u32>;
     async fn find_all_docs(&self, filter: DocumentFilterQuery) -> anyhow::Result<Vec<Document>>;
 
-    async fn update_doc(&self, incoming_document: DocumentMetadataForUpdate) -> anyhow::Result<Option<Document>>;
-    async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<()>;
+    async fn update_doc(&self, incoming_document: DocumentMetadataForUpdate) -> std::result::Result<Option<Document>, DocumentUpdateError>;
+    async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<bool>;
 }
 
 #[async_trait]

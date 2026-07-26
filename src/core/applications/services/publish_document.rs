@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
+use thiserror::Error;
 
 use crate::{core::{
-    components::{models::payload::ComponentPayload, repositories::ComponentPayloadResolver}, documents::{models::doc::Document, repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}},
-}, infra::rendering::services::{DocumentExportService}};
+    components::{models::payload::ComponentPayload, repositories::ComponentPayloadResolver}, documents::{models::doc::{Document, DocumentPublishingError}, repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}},
+}, infra::rendering::services::DocumentExportService};
 
 pub struct DocumentPublishingService;
 
@@ -15,6 +15,18 @@ type DocumentPublishingServiceDepsTuple = (
     Arc<dyn DocumentExportService>,
 );
 
+#[derive(Debug, Error)]
+pub enum PublishDocumentError {
+    #[error("Document with ID {0} was not found")]
+    NotFound(u32),
+
+    #[error(transparent)]
+    Domain(#[from] DocumentPublishingError),
+
+    #[error("Internal error: {0}")]
+    Internal(#[from] anyhow::Error),
+}
+
 impl DocumentPublishingService {
     pub async fn publish_document(
         (
@@ -22,9 +34,9 @@ impl DocumentPublishingService {
             document_publisher, document_export_service
         ): DocumentPublishingServiceDepsTuple,
         doc_id: u32,
-    ) -> anyhow::Result<()> {
+    ) -> std::result::Result<(), PublishDocumentError> {
         let mut document = documents_resolver.find_doc_by_id(doc_id).await?
-            .ok_or_else(|| anyhow!("Document not found for marking publishing"))?;
+            .ok_or(PublishDocumentError::NotFound(doc_id))?;
 
         document.marked_for_publishing()?;
 

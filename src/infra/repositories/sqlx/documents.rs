@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use std::{sync::Arc, result::Result};
 
-use anyhow::anyhow;
+use anyhow::{Ok, anyhow};
 use async_trait::async_trait;
 use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 
-use crate::core::documents::{models::{ doc::{DocStatus, Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublishParams, DocumentPublisher, DocumentsResolver}};
+use crate::core::documents::{models::{ doc::{DocStatus, Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublishParams, DocumentPublisher, DocumentUpdateError, DocumentsResolver}};
 
 impl TryFrom<&str> for DocStatus {
     type Error = anyhow::Error;
@@ -125,12 +125,15 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             .collect()
     }
 
-    async fn update_doc(&self, incoming_document: DocumentMetadataForUpdate) -> anyhow::Result<Option<Document>> {
+    async fn update_doc(
+        &self, 
+        incoming_document: DocumentMetadataForUpdate
+    ) -> std::result::Result<Option<Document>, DocumentUpdateError> {
         let doc_id = incoming_document.id;
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
         let row = match Self::fetch_opt_document_row(doc_id, &mut *tx).await? {
             Some(r) => r,
-            None => return Ok(None),
+            None => return Result::Ok(None),
         };
 
         let mut to_be_updated_doc = Document::try_from(row)?;
@@ -151,10 +154,10 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
 
         tx.commit().await?;
 
-        Ok(Some(to_be_updated_doc))
+        Result::Ok(Some(to_be_updated_doc))
     }
 
-    async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<()> {
+    async fn remove_doc_with_all_layouts_by_id(&self, doc_id: u32) -> anyhow::Result<bool> {
         let res = sqlx::query!(
             r#"
             DELETE FROM documents
@@ -166,10 +169,10 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         .await?;
 
         if res.rows_affected() == 0 {
-            return Err(anyhow!("Document with ID {} does not exist", doc_id));
+            return Ok(false);
         }
 
-        Ok(())
+        Ok(true)
     }
 }
 

@@ -1,12 +1,24 @@
-use anyhow::anyhow;
+use thiserror::Error;
 
-use crate::core::{components::repositories::ComponentTypeResolver, documents::repositories::{DocumentLayoutsModifier, DocumentsResolver}};
+use crate::core::{components::repositories::ComponentTypeResolver, documents::{models::doc::{ComponentSummary, DocumentLayoutError}, repositories::{DocumentLayoutsModifier, DocumentsResolver}}};
 
 type DocumentLayoutServiceDepsTuple<'a> = (
     &'a dyn DocumentsResolver,
     &'a dyn ComponentTypeResolver,
     &'a dyn DocumentLayoutsModifier,
 );
+
+#[derive(Debug, Error)]
+pub enum DocumentLayoutServiceError {
+    #[error("Document with ID {0} was not found")]
+    DocumentNotFound(u32),
+
+    #[error(transparent)]
+    Domain(#[from] DocumentLayoutError),
+
+    #[error("Infrastructure failure: {0}")]
+    Internal(#[from] anyhow::Error),
+}
 
 pub struct DocumentLayoutService;
 
@@ -15,38 +27,25 @@ impl DocumentLayoutService {
         (documents_resolver, component_type_resolver, document_layouts_modifier): DocumentLayoutServiceDepsTuple<'_>,
         doc_id: u32,
         version_ids: &[u32],
-    ) -> anyhow::Result<()> {
-        let mut doc = documents_resolver.find_doc_by_id(doc_id).await?
-            .ok_or_else(|| anyhow!("Document not found"))?;
-        let component_refs = component_type_resolver.find_all_components_with_type_by_version_ids(version_ids).await?;
+    ) -> Result<(), DocumentLayoutServiceError> {
+        let mut doc = documents_resolver
+            .find_doc_by_id(doc_id).await?
+            .ok_or(DocumentLayoutServiceError::DocumentNotFound(doc_id))?;
 
-        if component_refs.len() != version_ids.len() {
-            return Err(anyhow!("Incompatible number of component"));
-        }
+        let component_refs = component_type_resolver
+            .find_all_components_with_type_by_version_ids(version_ids).await?;
 
-        // Assume number of components used in each document is small to medium (1, 100)
-        // Choosing in-place sort for small memory allocation with small to medium additional steps
-        let mut component_ids: Vec<u32> = component_refs.iter()
-            .map(|c| c.id)
+        // Map repository structs to domain value objects
+        let summaries: Vec<ComponentSummary> = component_refs
+            .iter()
+            .map(|c| ComponentSummary {
+                root_id: c.id,
+                component_type: &c.component_type,
+            })
             .collect();
-        let original_len = component_ids.len();
 
-        component_ids.sort_unstable();
-        component_ids.dedup();
-        
-        if component_ids.len() != original_len {
-            return Err(anyhow!("Layout conflict: Cannot add multiple versions of the same root component to a single layout"));
-        }
-
-        let all_allowed = component_refs.iter()
-            .map(|c| &c.component_type)
-            .all(|t| doc.doc_type.is_allowed(t));
-        
-        if !all_allowed {
-            return Err(anyhow!("Document type mismatch: One or more component layouts are barred from this document type"));
-        }
-
-        doc.update_layout(version_ids.to_vec())?;
+        // All business logic runs inside the aggregate!
+        doc.update_layout(version_ids.to_vec(), &summaries)?;
         document_layouts_modifier.replace_layouts(doc_id, &doc.layout_version_ids).await?;
 
         Ok(())

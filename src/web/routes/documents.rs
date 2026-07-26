@@ -3,7 +3,7 @@ use std::{sync::Arc};
 use axum::{Json, Router, extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, routing::{delete, get, patch, post, put}};
 use serde::{Deserialize, Serialize};
 
-use crate::{core::{applications::services::{publish_document::DocumentPublishingService, update_document_layouts::DocumentLayoutService}, components::repositories::{ComponentPayloadResolver, ComponentTypeResolver}, documents::{models::{doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublisher, DocumentsResolver}}}, infra::rendering::services::DocumentExportService, web::routes::context::Context};
+use crate::{core::{applications::services::{publish_document::{DocumentPublishingService, PublishDocumentError}, update_document_layouts::{DocumentLayoutService, DocumentLayoutServiceError}}, components::repositories::{ComponentPayloadResolver, ComponentTypeResolver}, documents::{models::{doc::{Document, DocumentLayoutError, DocumentMetadataForUpdate}, doc_types::DocTypes}, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublisher, DocumentUpdateError, DocumentsResolver}}}, infra::rendering::services::DocumentExportService, web::routes::context::Context};
 
 pub fn build() -> Router<Context> {
     Router::new()
@@ -99,6 +99,10 @@ async fn partially_update_document_by_id(
     match document_lifecycle_manager.update_doc(incoming_document).await {
         Ok(Some(doc)) => (StatusCode::OK, Json(doc)).into_response(),
         Ok(None) => (StatusCode::NOT_FOUND, "Found no document with expected id for update").into_response(),
+        Err(DocumentUpdateError::Domain(err)) => (
+            StatusCode::BAD_REQUEST,
+            err.to_string()
+        ).into_response(),
         Err(err) => {
             tracing::warn!("Failed to update document with id={:?}: {:?}", id, err);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update document").into_response()
@@ -111,11 +115,18 @@ async fn remove_document_by_id(
     Path(id): Path<u32>
 ) -> impl IntoResponse {
     match document_lifecycle_manager.remove_doc_with_all_layouts_by_id(id).await {
-        Ok(_) => (StatusCode::NO_CONTENT).into_response(),
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND, 
+            format!("Document with ID {id} does not exist")
+        ).into_response(),
         Err(err) => {
-            tracing::warn!("{}", err.to_string());
-            (StatusCode::NOT_FOUND, err.to_string()).into_response()
-        },
+            tracing::error!(error = %err, id = id, "Failed to delete document");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR, 
+                "Internal server error"
+            ).into_response()
+        }
     }
 }
 
@@ -133,11 +144,43 @@ async fn update_document_layouts_by_id(
     );
 
     match DocumentLayoutService::update_layouts(deps, id, &version_ids).await {
-        Ok(_) => (StatusCode::NO_CONTENT).into_response(),
-        Err(err) => {
-            tracing::warn!("Failed to update document layouts with id={:?}: {:?}", id, err);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update document layouts").into_response()
-        },
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        
+        // 404 Not Found
+        Err(DocumentLayoutServiceError::DocumentNotFound(id)) => (
+            StatusCode::NOT_FOUND,
+            format!("Document {id} not found"),
+        ).into_response(),
+
+        // 400 Bad Request
+        Err(DocumentLayoutServiceError::Domain(DocumentLayoutError::IncompatibleComponentCount { expected, found })) => (
+            StatusCode::BAD_REQUEST,
+            format!("Component count mismatch: expected {expected}, found {found}"),
+        ).into_response(),
+
+        // 409 Conflict
+        Err(DocumentLayoutServiceError::Domain(DocumentLayoutError::DuplicateRootComponents)) => (
+            StatusCode::CONFLICT,
+            "Cannot add multiple versions of the same root component",
+        ).into_response(),
+
+        // 403 Forbidden
+        Err(DocumentLayoutServiceError::Domain(DocumentLayoutError::TypeMismatch)) => (
+            StatusCode::FORBIDDEN,
+            "One or more components are not allowed in this document type",
+        ).into_response(),
+
+        // 422 Unprocessable Entity (State machine error)
+        Err(DocumentLayoutServiceError::Domain(DocumentLayoutError::Status(err))) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            err.to_string(),
+        ).into_response(),
+
+        // 500 Internal Server Error (Database/System crashes)
+        Err(DocumentLayoutServiceError::Internal(err)) => {
+            tracing::error!(error = %err, "Failed to update document layout");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+        }
     }
 }
 
@@ -156,10 +199,22 @@ async fn publish_document_by_id(
     );
 
     match DocumentPublishingService::publish_document(deps, id).await {
-        Ok(_) => (StatusCode::ACCEPTED).into_response(),
-        Err(err) => {
-            tracing::warn!("Failed to accept document publishing request for document with id={:?}: {:?}", id, err);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to accept publishing document").into_response()
-        },
+        Ok(()) => (StatusCode::ACCEPTED).into_response(),
+        
+        Err(PublishDocumentError::NotFound(id)) => (
+            StatusCode::NOT_FOUND,
+            format!("Document {id} not found"),
+        ).into_response(),
+
+        // Handles BOTH EmptyLayout AND DocStatusError (AlreadyPublishing, AlreadyPublished, etc.)
+        Err(PublishDocumentError::Domain(err)) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            err.to_string(), // Human-readable error message: e.g. "Cannot publish an empty document layout"
+        ).into_response(),
+
+        Err(PublishDocumentError::Internal(err)) => {
+            tracing::error!(error = %err, doc_id = id, "Publish failed");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+        }
     }
 }
