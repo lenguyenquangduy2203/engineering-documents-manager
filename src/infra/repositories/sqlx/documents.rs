@@ -4,7 +4,7 @@ use anyhow::{Ok, anyhow};
 use async_trait::async_trait;
 use sqlx::{Executor, Pool, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 
-use crate::core::documents::{models::{ doc::{DocStatus, Document, DocumentMetadataForUpdate}, doc_types::DocTypes}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublishParams, DocumentPublisher, DocumentUpdateError, DocumentsResolver}};
+use crate::core::documents::{models::{ doc::{Document, DocumentMetadataForUpdate}, doc_types::DocTypes, doc_status::DocStatus}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublishParams, DocumentPublisher, DocumentUpdateError, DocumentsResolver}};
 
 impl TryFrom<&str> for DocStatus {
     type Error = anyhow::Error;

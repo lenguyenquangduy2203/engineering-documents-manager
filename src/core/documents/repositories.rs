@@ -3,7 +3,11 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::core::documents::models::{doc::{DocStatus, Document, DocumentMetadataError, DocumentMetadataForUpdate}, doc_types::DocTypes};
+use crate::core::documents::models::{
+    doc::{Document, DocumentMetadataError, DocumentMetadataForUpdate}, 
+    doc_types::DocTypes, 
+    doc_status::DocStatus
+};
 
 #[async_trait]
 pub trait DocumentsResolver: Send + Sync {

@@ -1,4 +1,6 @@
-use crate::{core::documents::models::doc::DocStatus, infra::dbc::sqlx::FilterSpecification};
+use crate::{
+    core::documents::models::doc_status::DocStatus, infra::dbc::sqlx::FilterSpecification,
+};
 
 pub struct StatusSpec(pub DocStatus);
 
