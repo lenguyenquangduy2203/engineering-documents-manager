@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
+
+use crate::core::documents::errors::doc_status::DocStatusError;
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
@@ -10,24 +11,6 @@ pub enum DocStatus {
     Publishing,
     Published,
     Failed,
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum DocStatusError {
-    #[error("Document is already in the process of publishing")]
-    AlreadyPublishing,
-
-    #[error("Published documents cannot re-enter publishing")]
-    AlreadyPublished,
-
-    #[error("Cannot directly finalize a failed document without restarting publish")]
-    InvalidFinalizeFromFailed,
-
-    #[error("Cannot transition to Failed state from state '{0}'")]
-    InvalidFailureTransition(DocStatus),
-
-    #[error("Cannot modify layout while document is in state '{0}'")]
-    LayoutModificationNotAllowed(DocStatus),
 }
 
 impl DocStatus {

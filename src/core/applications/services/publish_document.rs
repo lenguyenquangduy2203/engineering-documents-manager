@@ -1,10 +1,15 @@
 use std::sync::Arc;
 
-use thiserror::Error;
-
-use crate::{core::{
-    components::{models::payload::ComponentPayload, repositories::ComponentPayloadResolver}, documents::{models::doc::{Document, DocumentPublishingError}, repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}},
-}, infra::rendering::services::DocumentExportService};
+use crate::{
+    core::{
+        applications::errors::publish_doc::PublishDocumentError, 
+        components::{models::payload::ComponentPayload, repositories::ComponentPayloadResolver}, 
+        documents::{
+            models::doc::Document, 
+            repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}            
+        },
+    }, infra::rendering::services::DocumentExportService
+};
 
 pub struct DocumentPublishingService;
 
@@ -14,18 +19,6 @@ type DocumentPublishingServiceDepsTuple = (
     Arc<dyn DocumentPublisher>,
     Arc<dyn DocumentExportService>,
 );
-
-#[derive(Debug, Error)]
-pub enum PublishDocumentError {
-    #[error("Document with ID {0} was not found")]
-    NotFound(u32),
-
-    #[error(transparent)]
-    Domain(#[from] DocumentPublishingError),
-
-    #[error("Internal error: {0}")]
-    Internal(#[from] anyhow::Error),
-}
 
 impl DocumentPublishingService {
     pub async fn publish_document(

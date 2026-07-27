@@ -3,10 +3,13 @@ use std::sync::Arc;
 use axum::{Json, extract::{Path, State}, http::StatusCode, response::IntoResponse};
 
 use crate::core::{
-    applications::services::update_document_layouts::{DocumentLayoutService, DocumentLayoutServiceError}, 
+    applications::{
+        services::update_document_layouts::DocumentLayoutService, 
+        errors::update_layouts::DocumentLayoutServiceError
+    }, 
     components::repositories::ComponentTypeResolver, 
     documents::{
-        models::doc::DocumentLayoutError, 
+        errors::doc_layout::DocumentLayoutError, 
         repositories::{DocumentLayoutsModifier, DocumentsResolver}
     }
 };

@@ -3,10 +3,13 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::core::documents::models::{
-    doc::{Document, DocumentMetadataError, DocumentMetadataForUpdate}, 
-    doc_types::DocTypes, 
-    doc_status::DocStatus
+use crate::core::documents::{
+    models::{
+        doc::{Document, DocumentMetadataForUpdate}, 
+        doc_types::DocTypes, 
+        doc_status::DocStatus
+    }, 
+    errors::doc_metadata::DocumentMetadataError
 };
 
 #[async_trait]

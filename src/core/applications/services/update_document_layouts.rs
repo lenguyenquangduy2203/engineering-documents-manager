@@ -1,26 +1,19 @@
-use thiserror::Error;
+use crate::core::{
+    applications::errors::update_layouts::DocumentLayoutServiceError, 
+    components::repositories::ComponentTypeResolver, 
+    documents::{
+        models::doc::ComponentSummary, 
+        repositories::{DocumentLayoutsModifier, DocumentsResolver},
+    }
+};
 
-use crate::core::{components::repositories::ComponentTypeResolver, documents::{models::doc::{ComponentSummary, DocumentLayoutError}, repositories::{DocumentLayoutsModifier, DocumentsResolver}}};
+pub struct DocumentLayoutService;
 
 type DocumentLayoutServiceDepsTuple<'a> = (
     &'a dyn DocumentsResolver,
     &'a dyn ComponentTypeResolver,
     &'a dyn DocumentLayoutsModifier,
 );
-
-#[derive(Debug, Error)]
-pub enum DocumentLayoutServiceError {
-    #[error("Document with ID {0} was not found")]
-    DocumentNotFound(u32),
-
-    #[error(transparent)]
-    Domain(#[from] DocumentLayoutError),
-
-    #[error("Infrastructure failure: {0}")]
-    Internal(#[from] anyhow::Error),
-}
-
-pub struct DocumentLayoutService;
 
 impl DocumentLayoutService {
     pub async fn update_layouts(

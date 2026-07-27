@@ -4,7 +4,10 @@ use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse};
 
 use crate::{
     core::{
-        applications::services::publish_document::{DocumentPublishingService, PublishDocumentError}, 
+        applications::{
+            services::publish_document::DocumentPublishingService, 
+            errors::publish_doc::PublishDocumentError
+        }, 
         components::repositories::ComponentPayloadResolver, 
         documents::repositories::{DocumentPublisher, DocumentsResolver}
     }, 

@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 
-use crate::core::components::models::{payload::ComponentPayload, wrapper::{Component, ComponentError}};
+use crate::core::components::{
+    models::{payload::ComponentPayload, wrapper::Component}, 
+    errors::wrapper::ComponentError
+};
 
 use serde::Deserialize;
 

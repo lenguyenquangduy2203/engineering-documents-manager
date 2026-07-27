@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-use crate::core::components::models::{payload::ComponentPayload, values::version::Version};
+use crate::core::components::{
+    errors::wrapper::ComponentError,
+    models::{payload::ComponentPayload, values::version::Version},
+};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Component<T> {
@@ -11,12 +13,6 @@ pub struct Component<T> {
     pub version: Version,
     pub title: String,
     pub payload: T,
-}
-
-#[derive(Debug, Error)]
-pub enum ComponentError {
-    #[error("Incompatible component type: expected {expected}, received {received}")]
-    IncompatibleType { expected: String, received: String },
 }
 
 impl Component<ComponentPayload> {

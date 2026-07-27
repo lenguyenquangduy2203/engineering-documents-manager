@@ -1,11 +1,13 @@
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-use crate::core::documents::models::{
-    doc_status::{DocStatus, DocStatusError},
-    doc_types::DocTypes,
+use crate::core::documents::{
+    errors::{
+        doc_layout::DocumentLayoutError, doc_metadata::DocumentMetadataError,
+        doc_publication::DocumentPublishingError, doc_status::DocStatusError,
+    },
+    models::{doc_status::DocStatus, doc_types::DocTypes},
 };
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -17,38 +19,6 @@ pub struct DocumentMetadataForUpdate {
 pub struct ComponentSummary<'a> {
     pub root_id: u32,
     pub component_type: &'a str,
-}
-
-#[derive(Debug, Error)]
-pub enum DocumentMetadataError {
-    #[error("Invalid metadata: {message}")]
-    InvalidMetadata { message: String },
-}
-
-#[derive(Debug, Error)]
-pub enum DocumentLayoutError {
-    #[error(transparent)]
-    Status(#[from] DocStatusError),
-
-    #[error("Incompatible number of components requested: expected {expected}, found {found}")]
-    IncompatibleComponentCount { expected: usize, found: usize },
-
-    #[error("Layout conflict: Cannot add multiple versions of the same root component to a single layout")]
-    DuplicateRootComponents,
-
-    #[error(
-        "Document type mismatch: One or more component layouts are barred from this document type"
-    )]
-    TypeMismatch,
-}
-
-#[derive(Debug, Error)]
-pub enum DocumentPublishingError {
-    #[error("Cannot publish an empty document layout")]
-    EmptyLayout,
-
-    #[error(transparent)]
-    Status(#[from] DocStatusError),
 }
 
 #[derive(Deserialize, Serialize, Clone)]
