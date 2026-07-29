@@ -1,46 +1,11 @@
-use anyhow::anyhow;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-
-use crate::core::documents::{
-    errors::{
-        doc_layout::DocumentLayoutError, doc_metadata::DocumentMetadataError,
-        doc_publication::DocumentPublishingError, doc_status::DocStatusError,
-    },
-    models::{doc_status::DocStatus, doc_types::DocTypes},
+use crate::core::documents::errors::{
+    doc_layout::DocumentLayoutError, doc_metadata::DocumentMetadataError,
+    doc_status::DocStatusError,
 };
 
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct DocumentMetadataForUpdate {
-    pub id: u32,
-    pub title: Option<String>,
-}
-
-pub struct ComponentSummary<'a> {
-    pub root_id: u32,
-    pub component_type: &'a str,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct Document {
-    pub id: Option<u32>,
-    pub doc_type: DocTypes,
-    pub title: String,
-    pub status: DocStatus,
-    pub layout_version_ids: Vec<u32>,
-}
+use super::{ComponentSummary, Document, DocumentMetadataForUpdate};
 
 impl Document {
-    pub fn new(doc_type: DocTypes, title: &str) -> Self {
-        Self {
-            id: None,
-            doc_type,
-            title: title.into(),
-            status: DocStatus::Draft,
-            layout_version_ids: Vec::new(),
-        }
-    }
-
     pub fn apply_metadata_changes(
         &mut self,
         incoming_document: DocumentMetadataForUpdate,
@@ -99,32 +64,6 @@ impl Document {
 
         // 5. Apply state change
         self.layout_version_ids = version_ids;
-
-        Ok(())
-    }
-
-    pub fn marked_for_publishing(&mut self) -> Result<(), DocumentPublishingError> {
-        if self.layout_version_ids.is_empty() {
-            return Err(DocumentPublishingError::EmptyLayout);
-        }
-
-        self.status = self.status.transition_to_publishing()?;
-
-        Ok(())
-    }
-
-    pub fn finalize_publication(&mut self) -> anyhow::Result<DateTime<Utc>> {
-        if self.layout_version_ids.is_empty() {
-            return Err(anyhow!("Cannot publish an empty document layout."));
-        }
-
-        self.status = self.status.transition_to_published()?;
-
-        Ok(Utc::now())
-    }
-
-    pub fn mark_failed(&mut self) -> anyhow::Result<()> {
-        self.status = self.status.transition_to_failed()?;
 
         Ok(())
     }
