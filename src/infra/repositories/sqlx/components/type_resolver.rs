@@ -1,5 +1,5 @@
+use anyhow::Context;
 use async_trait::async_trait;
-use sqlx::{Row, sqlite::SqliteRow};
 
 use crate::core::components::repositories::{ComponentRef, ComponentTypeResolver};
 
@@ -15,37 +15,30 @@ impl ComponentTypeResolver for SqliteComponentRepository {
             return Ok(Vec::new());
         }
 
-        let json_ids = serde_json::to_string(version_ids)?;
-        let rows = sqlx::query(
+        let json_ids = serde_json::to_string(version_ids)
+            .with_context(|| format!("Failed to serialize version_ids to JSON array: {version_ids:?}"))?;
+
+        sqlx::query_as!(
+            ComponentRef,
             r#"
             SELECT 
-                c.id AS component_id, 
-                v.id AS version_id,
-                c.type AS component_type
+                c.id AS "id!: u32", 
+                v.id AS "version_id!: u32",
+                c.type AS "component_type"
             FROM components c
             LEFT JOIN component_versions v ON c.id = v.component_id
-            WHERE v.id IN (SELECT value FROM json_each($1))
-            "#
+            WHERE v.id IN (SELECT value FROM json_each(?))
+            "#,
+            json_ids,
         )
-        .bind(json_ids)
         .fetch_all(&*self.dbc)
-        .await?;
-
-        rows.into_iter()
-            .map(ComponentRef::try_from)
-            .collect()
-    }
-}
-
-
-impl TryFrom<SqliteRow> for ComponentRef {
-    type Error = anyhow::Error;
-
-    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
-        Ok(Self { 
-            id: row.get("component_id"), 
-            version_id: row.get("version_id"), 
-            component_type: row.get("component_type") 
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to fetch components for {} version ID(s) [sample: {:?}]",
+                version_ids.len(),
+                version_ids.iter().take(5).collect::<Vec<_>>()
+            )
         })
     }
 }

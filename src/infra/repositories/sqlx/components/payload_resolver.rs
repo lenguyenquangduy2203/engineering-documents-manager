@@ -1,5 +1,5 @@
+use anyhow::Context;
 use async_trait::async_trait;
-use sqlx::{Row, sqlite::SqliteRow};
 
 use crate::core::components::{models::payload::ComponentPayload, repositories::{ComponentPayloadRef, ComponentPayloadResolver}};
 
@@ -14,40 +14,44 @@ impl ComponentPayloadResolver for SqliteComponentRepository {
         if version_ids.is_empty() {
             return Ok(Vec::new());
         }
-
+        
         let json_ids = serde_json::to_string(version_ids)?;
-        let rows = sqlx::query(
+        
+        sqlx::query_as!(
+            IntermediateComponentPayloadRef,
             r#"
             SELECT 
-                c.id AS component_id, 
-                v.id AS version_id,
-                v.data AS payload
+                c.id AS "component_id!: u32", 
+                v.id AS "version_id!: u32",
+                v.data AS "payload_str!"
             FROM components c
             LEFT JOIN component_versions v ON c.id = v.component_id
-            WHERE v.id IN (SELECT value FROM json_each($1))
-            "#
-        )
-        .bind(json_ids)
-        .fetch_all(&*self.dbc)
-        .await?;
-
-        rows.into_iter()
-            .map(ComponentPayloadRef::try_from)
-            .collect()
+            WHERE v.id IN (SELECT value FROM json_each(?))
+            "#,
+            json_ids,
+        ).fetch_all(&*self.dbc).await
+        .with_context(|| format!("Failed to fetch component payloads for version_ids: {version_ids:?}"))?
+        .into_iter().map(ComponentPayloadRef::try_from).collect()
     }
 }
 
-impl TryFrom<SqliteRow> for ComponentPayloadRef {
+struct IntermediateComponentPayloadRef {
+    pub component_id: u32,
+    pub version_id: u32,
+    pub payload_str: String,
+}
+
+impl TryFrom<IntermediateComponentPayloadRef> for ComponentPayloadRef {
     type Error = anyhow::Error;
 
-    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
-        let payload_str: String = row.get("payload");
-        let payload: ComponentPayload = serde_json::from_str(&payload_str)?;
+    fn try_from(raw: IntermediateComponentPayloadRef) -> Result<Self, Self::Error> {
+        let payload: ComponentPayload = serde_json::from_str(&raw.payload_str)
+            .with_context(|| format!("Failed to parse ComponentPayload JSON for component_id={}", raw.component_id))?;
 
-        Ok(Self { 
-            component_id: row.get("component_id"), 
-            version_id: row.get("version_id"), 
-            payload 
+        Ok(Self {
+            component_id: raw.component_id,
+            version_id: raw.version_id,
+            payload,
         })
     }
 }
