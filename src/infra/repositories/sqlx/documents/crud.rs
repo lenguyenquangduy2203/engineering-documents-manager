@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, Sqlite};
 
-use crate::core::documents::{models::doc::{Document, DocumentMetadataForUpdate}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLifecycleManager, DocumentUpdateError}};
+use crate::{core::documents::{models::doc::{Document, DocumentMetadataForUpdate}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLifecycleManager, DocumentUpdateError}}, infra::repositories::sqlx::documents::rows::doc::DocRow};
 
 use super::SqliteDocumentsRepository;
 
@@ -27,11 +27,11 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT
-                d.id, 
-                d.type, 
-                d.title, 
-                d.status,
-                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS layout_version_ids
+                d.id AS "id!: u32", 
+                d.type AS "doc_type", 
+                d.title AS "title", 
+                d.status AS "status",
+                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS "layout_version_ids?: String"
             FROM documents d
             LEFT JOIN document_layouts l
                 ON d.id = l.document_id
@@ -40,11 +40,11 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         );
         let specs = DocumentQuery::new(filter);
         specs.apply(&mut qb);
-        let query = qb.build();
+        let query = qb.build_query_as::<DocRow>();
         let rows = query.fetch_all(&*self.dbc).await?;
 
         rows.into_iter()
-            .map(Document::try_from)
+            .map(DocRow::try_into)
             .collect()
     }
 
@@ -54,12 +54,11 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
     ) -> std::result::Result<Option<Document>, DocumentUpdateError> {
         let doc_id = incoming_document.id;
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
-        let row = match Self::fetch_opt_document_row(doc_id, &mut *tx).await? {
+        let mut to_be_updated_doc = match Self::fetch_opt_document_row(doc_id, &mut *tx).await? {
             Some(r) => r,
             None => return Result::Ok(None),
         };
 
-        let mut to_be_updated_doc = Document::try_from(row)?;
         to_be_updated_doc.apply_metadata_changes(incoming_document)?;
 
         sqlx::query!(

@@ -1,14 +1,15 @@
 mod crud;
 mod type_resolver;
 mod payload_resolver;
+mod rows;
 
 use std::sync::Arc;
 
 use anyhow::Ok;
 use serde_json::Value;
-use sqlx::{Executor, Pool, Sqlite, Transaction, sqlite::SqliteRow};
+use sqlx::{Executor, Pool, Sqlite, Transaction};
 
-use crate::core::components::models::values::version::Version;
+use crate::{core::components::models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, infra::repositories::sqlx::components::rows::component::ComponentRow};
 
 pub struct SqliteComponentRepository {
     dbc: Arc<Pool<Sqlite>>,
@@ -40,21 +41,27 @@ impl SqliteComponentRepository {
         Ok(())
     }
 
-    async fn fetch_opt_component_row<'c, E: Executor<'c, Database = Sqlite>>(
+    async fn fetch_opt_component_payload<'c, E: Executor<'c, Database = Sqlite>>(
         component_id: u32, 
         executor: E
-    ) -> anyhow::Result<Option<SqliteRow>> {
-        Ok(sqlx::query(
+    ) -> anyhow::Result<Option<Component<ComponentPayload>>> {
+        Ok(sqlx::query_as!(
+            ComponentRow,
             r#"
-            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
+            SELECT 
+                c.id AS "id!: u32", 
+                c.latest_version_number AS "version: u32", 
+                c.current_title AS "title", 
+                v.data as "payload"
             FROM components c
             JOIN component_versions v 
                 ON c.id = v.component_id 
                 AND c.latest_version_number = v.version_number
-            WHERE c.id = $1
-            "#
+            WHERE c.id = ?
+            "#,
+            component_id,
         )
-        .bind(component_id)
-        .fetch_optional(executor).await?)
+        .fetch_optional(executor).await?
+        .map(ComponentRow::try_into).transpose()?)
     }
 }

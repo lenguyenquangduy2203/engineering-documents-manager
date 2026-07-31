@@ -2,13 +2,15 @@ mod doc_resolver;
 mod crud;
 mod layouts;
 mod publication;
+mod rows;
 
-use std::{sync::Arc, result::Result};
+use std::sync::Arc;
 
-use anyhow::{Ok, anyhow};
-use sqlx::{Executor, Pool, Row, Sqlite, sqlite::SqliteRow};
+use anyhow::Ok;
+use sqlx::{Executor, Pool, Sqlite};
 
-use crate::core::documents::models::{ doc::Document, doc_types::DocTypes, doc_status::DocStatus};
+use crate::core::documents::models::doc::Document;
+use crate::infra::repositories::sqlx::documents::rows::doc::DocRow;
 
 pub struct SqliteDocumentsRepository {
     dbc: Arc<Pool<Sqlite>>,
@@ -22,57 +24,24 @@ impl SqliteDocumentsRepository {
     async fn fetch_opt_document_row<'c, E: Executor<'c, Database = Sqlite>>(
         doc_id: u32,
         executor: E
-    ) -> anyhow::Result<Option<SqliteRow>> {
-        Ok(sqlx::query(
+    ) -> anyhow::Result<Option<Document>> {
+        Ok(sqlx::query_as!(
+            DocRow,
             r#"
             SELECT 
-                d.id, 
-                d.type, 
-                d.title, 
-                d.status,
-                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS layout_version_ids
+                d.id AS "id!: u32", 
+                d.type AS "doc_type", 
+                d.title AS "title", 
+                d.status AS "status",
+                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS "layout_version_ids?: String"
             FROM documents d
             LEFT JOIN document_layouts l ON d.id = l.document_id
-            WHERE d.id = $1
+            WHERE d.id = ?
             GROUP BY d.id
-            "#
+            "#,
+            doc_id,
         )
-        .bind(doc_id)
-        .fetch_optional(executor)
-        .await?)
-    }
-}
-
-
-impl TryFrom<&str> for DocStatus {
-    type Error = anyhow::Error;
-
-    fn try_from(status: &str) -> Result<Self, Self::Error> {
-        serde_json::from_value(
-            serde_json::Value::String(status.to_string())
-        ).map_err(|_| anyhow!("Unknown document status"))
-    }
-}
-
-impl TryFrom<SqliteRow> for Document {
-    type Error = anyhow::Error;
-
-    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
-        let layout_ids_str: Option<String> = row.get("layout_version_ids");
-        let layout_version_ids = match layout_ids_str {
-            Some(s) if !s.is_empty() => s
-                .split(',')
-                .map(|val| val.trim().parse::<u32>().map_err(|e| anyhow!(e)))
-                .collect::<Result<Vec<u32>, _>>()?,
-            _ => Vec::new(),
-        };
-
-        Ok(Self { 
-            id: Some(row.get("id")), 
-            doc_type: DocTypes::try_from(row.get::<&str, _>("type"))?, 
-            title: row.get("title"), 
-            status: DocStatus::try_from(row.get::<&str, _>("status"))?, 
-            layout_version_ids
-        })
+        .fetch_optional(executor).await?
+        .map(DocRow::try_into).transpose()?)
     }
 }

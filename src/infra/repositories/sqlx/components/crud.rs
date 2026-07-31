@@ -1,7 +1,17 @@
 use async_trait::async_trait;
-use sqlx::{QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
+use sqlx::{QueryBuilder, Sqlite};
 
-use crate::core::components::{models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, queries::component::ComponentQuery, repositories::{ComponentFilterQuery, ComponentsRepository, RemoveComponentError, UpdateComponentError}};
+use crate::{
+    core::components::{
+        models::{payload::ComponentPayload, wrapper::Component}, 
+        queries::component::ComponentQuery, 
+        repositories::{
+            ComponentFilterQuery, ComponentsRepository, 
+            RemoveComponentError, UpdateComponentError
+        }
+    }, 
+    infra::repositories::sqlx::components::rows::component::ComponentRow
+};
 
 use super::SqliteComponentRepository;
 
@@ -43,7 +53,11 @@ impl ComponentsRepository for SqliteComponentRepository {
     ) -> anyhow::Result<Vec<Component<ComponentPayload>>> {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
-            SELECT c.id, c.latest_version_number, c.type as component_type, c.current_title, v.data as payload_json
+            SELECT 
+                c.id AS "id!: u32", 
+                c.latest_version_number AS "version", 
+                c.current_title AS "title", 
+                v.data as "payload"
             FROM components c
             JOIN component_versions v 
                 ON c.id = v.component_id 
@@ -53,19 +67,16 @@ impl ComponentsRepository for SqliteComponentRepository {
         );
         let specs = ComponentQuery::new(filter);
         specs.apply(&mut qb);
-        let query = qb.build();
+        let query = qb.build_query_as::<ComponentRow>();
         let rows = query.fetch_all(&*self.dbc).await?;
 
         rows.into_iter()
-            .map(Component::try_from)
+            .map(ComponentRow::try_into)
             .collect()
     }
 
     async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>> {
-        match Self::fetch_opt_component_row(component_id, &*self.dbc).await? {
-            Some(row) => Ok(Some(Component::try_from(row)?)),
-            None => Ok(None),
-        }
+        Self::fetch_opt_component_payload(component_id, &*self.dbc).await
     }
 
     async fn update_component(
@@ -74,12 +85,11 @@ impl ComponentsRepository for SqliteComponentRepository {
         incoming_component: Component<ComponentPayload>
     ) -> std::result::Result<Option<Component<ComponentPayload>>, UpdateComponentError> {
         let mut tx = self.dbc.begin_with("BEGIN IMMEDIATE").await?;
-        let row = match Self::fetch_opt_component_row(component_id, &mut *tx).await? {
+        let current_component = match Self::fetch_opt_component_payload(component_id, &mut *tx).await? {
             Some(r) => r,
             None => return Result::Ok(None),
         };
 
-        let current_component = Component::try_from(row)?;
         let updated_component = current_component.apply_changes(incoming_component)?;
         let updated_payload_value = serde_json::to_value(&updated_component.payload)
             .map_err(|e| anyhow::anyhow!("Serialization failed: {e}"))?;
@@ -142,21 +152,5 @@ impl ComponentsRepository for SqliteComponentRepository {
         tx.commit().await?;
 
         Result::Ok(true)
-    }
-}
-
-impl TryFrom<SqliteRow> for Component<ComponentPayload> {
-    type Error = anyhow::Error;
-
-    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
-        let payload_str: String = row.get("payload_json");
-        let payload: ComponentPayload = serde_json::from_str(&payload_str)?;
-
-        Ok(Self {
-            id: Some(row.get::<u32, _>("id")),
-            version: Version(row.get::<u32, _>("latest_version_number")),
-            title: row.get("current_title"),
-            payload,
-        })
     }
 }
