@@ -11,7 +11,7 @@ Content-Type: application/json
 PUT http://localhost:3000/documents/5/layouts
 Content-Type: application/json
 
-[2, 3, 5]
+[5, 3, 2]
 
 ### Get All Documents (With Query Filters)
 GET http://localhost:3000/documents?status=DRAFT
@@ -20,7 +20,7 @@ GET http://localhost:3000/documents?status=DRAFT
 GET http://localhost:3000/documents/5
 
 ### Partially Update Document Metadata
-PATCH http://localhost:3000/documents/2
+PATCH http://localhost:3000/documents/1
 Content-Type: application/json
 
 {
@@ -28,7 +28,7 @@ Content-Type: application/json
 }
 
 ### Delete Document and Its Layouts
-DELETE http://localhost:3000/documents/4
+DELETE http://localhost:3000/documents/1
 
 ### Publish a Document
 POST http://localhost:3000/documents/5/publish

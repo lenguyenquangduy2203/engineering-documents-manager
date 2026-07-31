@@ -27,11 +27,11 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT
-                d.id AS "id!: u32", 
+                d.id AS "id", 
                 d.type AS "doc_type", 
                 d.title AS "title", 
                 d.status AS "status",
-                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS "layout_version_ids?: String"
+                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS "layout_version_ids"
             FROM documents d
             LEFT JOIN document_layouts l
                 ON d.id = l.document_id

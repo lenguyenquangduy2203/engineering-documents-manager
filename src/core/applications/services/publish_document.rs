@@ -88,7 +88,7 @@ impl DocumentPublishingService {
         document: &mut Document,
     ) -> anyhow::Result<()> {
         let payloads: Vec<ComponentPayload> = component_payload_resolver
-            .find_all_components_with_payload_by_version_ids(&document.layout_version_ids).await?
+            .find_all_components_with_payload_by_version_ids(doc_id, &document.layout_version_ids).await?
             .into_iter()
             .map(|c| c.payload)
             .collect();

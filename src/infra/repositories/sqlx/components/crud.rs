@@ -54,7 +54,7 @@ impl ComponentsRepository for SqliteComponentRepository {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT 
-                c.id AS "id!: u32", 
+                c.id AS "id", 
                 c.latest_version_number AS "version", 
                 c.current_title AS "title", 
                 v.data as "payload"
