@@ -2,16 +2,19 @@ mod lifecycle;
 mod mutations;
 
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
-use crate::core::documents::models::{doc_status::DocStatus, doc_types::DocTypes};
+use crate::core::documents::models::{
+    doc_status::DocStatus, doc_types::DocTypes, layout_version_ids::LayoutVersionIds,
+};
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, FromRow)]
 pub struct Document {
     pub id: Option<u32>,
     pub doc_type: DocTypes,
     pub title: String,
     pub status: DocStatus,
-    pub layout_version_ids: Vec<u32>,
+    pub layout_version_ids: LayoutVersionIds,
 }
 
 impl Document {
@@ -21,7 +24,7 @@ impl Document {
             doc_type,
             title: title.into(),
             status: DocStatus::Draft,
-            layout_version_ids: Vec::new(),
+            layout_version_ids: LayoutVersionIds::default(),
         }
     }
 }

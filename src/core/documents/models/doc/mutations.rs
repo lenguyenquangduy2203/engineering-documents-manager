@@ -1,6 +1,9 @@
-use crate::core::documents::errors::{
-    doc_layout::DocumentLayoutError, doc_metadata::DocumentMetadataError,
-    doc_status::DocStatusError,
+use crate::core::documents::{
+    errors::{
+        doc_layout::DocumentLayoutError, doc_metadata::DocumentMetadataError,
+        doc_status::DocStatusError,
+    },
+    models::layout_version_ids::LayoutVersionIds,
 };
 
 use super::{ComponentSummary, Document, DocumentMetadataForUpdate};
@@ -63,7 +66,7 @@ impl Document {
         }
 
         // 5. Apply state change
-        self.layout_version_ids = version_ids;
+        self.layout_version_ids = LayoutVersionIds(version_ids);
 
         Ok(())
     }

@@ -1,7 +1,10 @@
 use anyhow::Context;
 use async_trait::async_trait;
 
-use crate::core::components::{models::payload::ComponentPayload, repositories::{ComponentPayloadRef, ComponentPayloadResolver}};
+use crate::{
+    core::components::repositories::{ComponentPayloadRef, ComponentPayloadResolver},
+    infra::repositories::sqlx::components::rows::payload_ref::ComponentPayloadRefRow
+};
 
 use super::SqliteComponentRepository;
 
@@ -19,7 +22,7 @@ impl ComponentPayloadResolver for SqliteComponentRepository {
         let json_ids = serde_json::to_string(version_ids)?;
         
         sqlx::query_as!(
-            IntermediateComponentPayloadRef,
+            ComponentPayloadRefRow,
             r#"
             SELECT 
                 c.id AS "component_id!: u32", 
@@ -36,26 +39,5 @@ impl ComponentPayloadResolver for SqliteComponentRepository {
         ).fetch_all(&*self.dbc).await
         .with_context(|| format!("Failed to fetch component payloads for version_ids: {version_ids:?}"))?
         .into_iter().map(ComponentPayloadRef::try_from).collect()
-    }
-}
-
-struct IntermediateComponentPayloadRef {
-    pub component_id: u32,
-    pub version_id: u32,
-    pub payload_str: String,
-}
-
-impl TryFrom<IntermediateComponentPayloadRef> for ComponentPayloadRef {
-    type Error = anyhow::Error;
-
-    fn try_from(raw: IntermediateComponentPayloadRef) -> Result<Self, Self::Error> {
-        let payload: ComponentPayload = serde_json::from_str(&raw.payload_str)
-            .with_context(|| format!("Failed to parse ComponentPayload JSON for component_id={}", raw.component_id))?;
-
-        Ok(Self {
-            component_id: raw.component_id,
-            version_id: raw.version_id,
-            payload,
-        })
     }
 }

@@ -1,11 +1,13 @@
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::Type;
+use strum_macros::{Display, EnumString};
 
 use crate::core::documents::errors::doc_status::DocStatusError;
 
-#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, EnumString, Display, Type)]
 #[serde(rename_all = "UPPERCASE")]
+#[strum(serialize_all = "UPPERCASE")]
+#[sqlx(type_name = "TEXT", rename_all = "UPPERCASE")]
 pub enum DocStatus {
     Draft,
     Publishing,
@@ -39,23 +41,5 @@ impl DocStatus {
 
     pub fn can_modify_layout(self) -> bool {
         matches!(self, DocStatus::Draft | DocStatus::Failed)
-    }
-}
-
-impl From<&DocStatus> for String {
-    fn from(value: &DocStatus) -> Self {
-        match value {
-            DocStatus::Draft => "DRAFT".into(),
-            DocStatus::Publishing => "PUBLISHING".into(),
-            DocStatus::Published => "PUBLISHED".into(),
-            DocStatus::Failed => "FAILED".into(),
-        }
-    }
-}
-
-impl Display for DocStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let content: String = self.into();
-        write!(f, "{}", content)
     }
 }

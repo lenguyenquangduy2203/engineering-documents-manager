@@ -1,7 +1,8 @@
+use anyhow::anyhow;
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, Sqlite};
 
-use crate::{core::documents::{models::doc::{Document, DocumentMetadataForUpdate}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLifecycleManager, DocumentUpdateError}}, infra::repositories::sqlx::documents::rows::doc::DocRow};
+use crate::core::documents::{models::doc::{Document, DocumentMetadataForUpdate}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLifecycleManager, DocumentUpdateError}};
 
 use super::SqliteDocumentsRepository;
 
@@ -27,11 +28,11 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT
-                d.id AS "id", 
-                d.type AS "doc_type", 
+                d.id AS "id!: u32", 
+                d.type AS "doc_type: DocTypes", 
                 d.title AS "title", 
-                d.status AS "status",
-                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS "layout_version_ids"
+                d.status AS "status: DocStatus",
+                GROUP_CONCAT(l.component_version_id ORDER BY l.position ASC) AS "layout_version_ids?: String"
             FROM documents d
             LEFT JOIN document_layouts l
                 ON d.id = l.document_id
@@ -40,12 +41,9 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         );
         let specs = DocumentQuery::new(filter);
         specs.apply(&mut qb);
-        let query = qb.build_query_as::<DocRow>();
-        let rows = query.fetch_all(&*self.dbc).await?;
-
-        rows.into_iter()
-            .map(DocRow::try_into)
-            .collect()
+        let query = qb.build_query_as::<Document>();
+        
+        query.fetch_all(&*self.dbc).await.map_err(|e| anyhow!(e))
     }
 
     async fn update_doc(
