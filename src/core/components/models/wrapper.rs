@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
+use sqlx::{
+    prelude::{FromRow, Type},
+    types::Json,
+};
 
 use crate::core::components::{
     errors::wrapper::ComponentError,
     models::{payload::ComponentPayload, values::version::Version},
 };
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Type, FromRow)]
 pub struct Component<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<u32>,
@@ -36,11 +40,22 @@ impl Component<ComponentPayload> {
             self.title
         };
 
-        Ok(Component {
+        std::result::Result::Ok(Component {
             id: self.id,
             version: self.version.next(),
             title: updated_title,
             payload: incoming.payload,
         })
+    }
+}
+
+impl<T> From<Component<Json<T>>> for Component<T> {
+    fn from(value: Component<Json<T>>) -> Self {
+        Self {
+            id: value.id,
+            version: value.version,
+            title: value.title,
+            payload: value.payload.0,
+        }
     }
 }

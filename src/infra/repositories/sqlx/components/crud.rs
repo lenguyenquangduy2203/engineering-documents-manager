@@ -1,16 +1,13 @@
 use async_trait::async_trait;
-use sqlx::{QueryBuilder, Sqlite};
+use sqlx::{QueryBuilder, Sqlite, types::Json};
 
-use crate::{
-    core::components::{
-        models::{payload::ComponentPayload, wrapper::Component}, 
-        queries::component::ComponentQuery, 
-        repositories::{
-            ComponentFilterQuery, ComponentsRepository, 
-            RemoveComponentError, UpdateComponentError
+use crate::core::components::{
+    models::{payload::ComponentPayload, wrapper::Component}, 
+    queries::component::ComponentQuery, 
+    repositories::{
+        ComponentFilterQuery, ComponentsRepository, 
+        RemoveComponentError, UpdateComponentError
         }
-    }, 
-    infra::repositories::sqlx::components::rows::component::ComponentRow
 };
 
 use super::SqliteComponentRepository;
@@ -67,12 +64,12 @@ impl ComponentsRepository for SqliteComponentRepository {
         );
         let specs = ComponentQuery::new(filter);
         specs.apply(&mut qb);
-        let query = qb.build_query_as::<ComponentRow>();
+        let query = qb.build_query_as::<Component<Json<ComponentPayload>>>();
         let rows = query.fetch_all(&*self.dbc).await?;
 
-        rows.into_iter()
-            .map(ComponentRow::try_into)
-            .collect()
+        Ok(rows.into_iter()
+            .map(Component::into)
+            .collect())
     }
 
     async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>> {

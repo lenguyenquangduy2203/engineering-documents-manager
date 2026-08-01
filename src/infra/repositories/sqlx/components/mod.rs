@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use anyhow::Ok;
 use serde_json::Value;
-use sqlx::{Executor, Pool, Sqlite, Transaction};
+use sqlx::{Executor, Pool, Sqlite, Transaction, types::Json};
 
-use crate::{core::components::models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, infra::repositories::sqlx::components::rows::component::ComponentRow};
+use crate::core::components::models::{payload::ComponentPayload, values::version::Version, wrapper::Component};
 
 pub struct SqliteComponentRepository {
     dbc: Arc<Pool<Sqlite>>,
@@ -46,13 +46,13 @@ impl SqliteComponentRepository {
         executor: E
     ) -> anyhow::Result<Option<Component<ComponentPayload>>> {
         Ok(sqlx::query_as!(
-            ComponentRow,
+            Component::<Json<ComponentPayload>>,
             r#"
             SELECT 
                 c.id AS "id!: u32", 
                 c.latest_version_number AS "version: u32", 
                 c.current_title AS "title", 
-                v.data as "payload"
+                v.data as "payload!: Json<ComponentPayload>"
             FROM components c
             JOIN component_versions v 
                 ON c.id = v.component_id 
@@ -62,6 +62,6 @@ impl SqliteComponentRepository {
             component_id,
         )
         .fetch_optional(executor).await?
-        .map(ComponentRow::try_into).transpose()?)
+        .map(Component::into))
     }
 }
