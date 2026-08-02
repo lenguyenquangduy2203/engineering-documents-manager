@@ -5,7 +5,9 @@ use std::{env, sync::OnceLock};
 
 use crate::configs::{dbc::DBCConfig, server::ServerConfig};
 
-#[derive(Clone)]
+/* #region Config Object */
+#[derive(Debug, Clone, Default)]
+/* #endregion */
 pub struct Config {
     host: String,
     port: String,

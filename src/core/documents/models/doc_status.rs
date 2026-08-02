@@ -1,13 +1,20 @@
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::Type;
-use strum_macros::{Display, EnumString};
-
 use crate::core::documents::errors::doc_status::DocStatusError;
 
-#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, EnumString, Display, Type)]
+/* #region Tiny Value Object */
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
+/* #endregion */
+/* #region Strum Enum */
+#[derive(strum_macros::Display, strum_macros::EnumString, strum_macros::EnumIter)]
 #[strum(serialize_all = "UPPERCASE")]
-#[sqlx(type_name = "TEXT", rename_all = "UPPERCASE")]
+/* #endregion */
+/* #region Sqlx Data Type */
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "text", rename_all = "UPPERCASE")]
+/* #endregion */
 pub enum DocStatus {
     Draft,
     Publishing,

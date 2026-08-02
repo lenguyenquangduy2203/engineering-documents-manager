@@ -1,8 +1,14 @@
-use serde::{Deserialize, Serialize};
-use std::fmt;
-
-#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "UPPERCASE")] // Enforces "GET", "POST", etc. in JSON
+/* #region Tiny Value Object */
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+/* #endregion */
+/* #region Strum Enum */
+#[derive(strum_macros::Display, strum_macros::EnumString, strum_macros::EnumIter)]
+#[strum(serialize_all = "UPPERCASE")]
+/* #endregion */
 pub enum HttpMethod {
     Get,
     Post,
@@ -11,19 +17,4 @@ pub enum HttpMethod {
     Patch,
     Head,
     Options,
-}
-
-impl fmt::Display for HttpMethod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Self::Get => "GET",
-            Self::Post => "POST",
-            Self::Put => "PUT",
-            Self::Delete => "DELETE",
-            Self::Patch => "PATCH",
-            Self::Head => "HEAD",
-            Self::Options => "OPTIONS",
-        };
-        write!(f, "{}", s)
-    }
 }

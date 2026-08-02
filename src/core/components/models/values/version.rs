@@ -1,10 +1,15 @@
 use std::ops::Deref;
 
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::Type;
-
-#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, Type)]
+/* #region Tiny Value Object */
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+/* #endregion */
+/* #region Sqlx Data Type */
+#[derive(sqlx::Type)]
 #[sqlx(transparent)]
+/* #endregion */
 pub struct Version(pub u32);
 
 impl Version {

@@ -1,15 +1,12 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    prelude::{FromRow, Type},
-    types::Json,
-};
+use sqlx::{prelude::FromRow, types::Json};
 
 use crate::core::components::{
     errors::wrapper::ComponentError,
     models::{payload::ComponentPayload, values::version::Version},
 };
 
-#[derive(Deserialize, Serialize, Clone, Type, FromRow)]
+#[derive(Deserialize, Serialize, Clone, FromRow)]
 pub struct Component<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<u32>,

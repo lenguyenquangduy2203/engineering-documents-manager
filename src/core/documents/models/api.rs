@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/* #region Service Object */
+#[derive(Debug, Clone, Copy, Default)]
+/* #endregion */
 pub struct ApiDoc;
 
 impl ApiDoc {

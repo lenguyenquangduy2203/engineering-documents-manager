@@ -1,8 +1,11 @@
 use std::ops::Deref;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+/* #region Value Object */
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+/* #endregion */
 pub struct LayoutVersionIds(pub Vec<u32>);
 
 // Allow easy access to the underlying Vec<u32> (e.g., ids.len(), ids.iter())

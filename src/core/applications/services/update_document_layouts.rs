@@ -7,6 +7,9 @@ use crate::core::{
     }
 };
 
+/* #region Service Object */
+#[derive(Debug, Clone, Copy, Default)]
+/* #endregion */
 pub struct DocumentLayoutService;
 
 type DocumentLayoutServiceDepsTuple<'a> = (

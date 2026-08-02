@@ -11,6 +11,9 @@ use crate::{
     }, infra::rendering::services::DocumentExportService
 };
 
+/* #region Service Object */
+#[derive(Debug, Clone, Copy, Default)]
+/* #endregion */
 pub struct DocumentPublishingService;
 
 type DocumentPublishingServiceDepsTuple = (
