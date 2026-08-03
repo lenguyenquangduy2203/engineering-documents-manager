@@ -3,12 +3,12 @@ POST http://localhost:3000/documents
 Content-Type: application/json
 
 {
-    "doc_type": "SDD",
+    "docType": "SDD",
     "title": "System Design v2"
 }
 
 ### Update Document Layouts (Link Components to Document)
-PUT http://localhost:3000/documents/6/layouts
+PUT http://localhost:3000/documents/1/layouts
 Content-Type: application/json
 
 [3, 5, 2]
@@ -17,7 +17,7 @@ Content-Type: application/json
 GET http://localhost:3000/documents?status=DRAFT
 
 ### Get a Specific Document by ID
-GET http://localhost:3000/documents/6
+GET http://localhost:3000/documents/1
 
 ### Partially Update Document Metadata
 PATCH http://localhost:3000/documents/1
@@ -31,4 +31,4 @@ Content-Type: application/json
 DELETE http://localhost:3000/documents/1
 
 ### Publish a Document
-POST http://localhost:3000/documents/6/publish
+POST http://localhost:3000/documents/1/publish

@@ -1,12 +1,20 @@
-use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, types::Json};
+use sqlx::types::Json;
 
 use crate::core::components::{
     errors::wrapper::ComponentError,
     models::{payload::ComponentPayload, values::version::Version},
 };
 
-#[derive(Deserialize, Serialize, Clone, FromRow)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
+/* #region Sqlx Record */
+#[derive(sqlx::FromRow)]
+/* #endregion */
 pub struct Component<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<u32>,

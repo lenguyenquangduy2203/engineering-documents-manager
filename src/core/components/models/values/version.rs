@@ -5,6 +5,7 @@ use std::ops::Deref;
 /* #endregion */
 /* #region Serde DTO */
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
 /* #endregion */
 /* #region Sqlx Data Type */
 #[derive(sqlx::Type)]

@@ -1,11 +1,15 @@
-use serde::{Deserialize, Serialize};
-
 use crate::core::components::models::{
     design_specs::DesignSpecSubType, references::ReferenceSubType, schematics::SchematicSubType,
 };
 
-#[derive(Deserialize, Serialize, Clone)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "PascalCase")]
 #[serde(tag = "group", content = "data")]
+/* #endregion */
 pub enum ComponentPayload {
     DesignSpec(DesignSpecSubType),
     Schematic(SchematicSubType),

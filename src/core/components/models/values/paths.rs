@@ -1,41 +1,50 @@
-use serde::{Deserialize, Serialize};
+use anyhow::anyhow;
 
-#[derive(Serialize, Clone, Debug)]
-#[serde(transparent)]
+/* #region Value Object */
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(try_from = "String", into = "String")]
+/* #endregion */
 pub struct ApiPath(pub String);
 
-impl<'de> Deserialize<'de> for ApiPath {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        if !s.starts_with('/') {
-            return Err(serde::de::Error::custom(
-                "API endpoint must start with a forward slash '/'",
-            ));
+impl TryFrom<String> for ApiPath {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if !value.starts_with('/') {
+            return Err(anyhow!("API endpoint must start with a forward slash '/'",));
         }
 
-        Ok(ApiPath(s))
+        Ok(ApiPath(value))
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
-#[serde(transparent)]
+impl From<ApiPath> for String {
+    fn from(value: ApiPath) -> Self {
+        value.0
+    }
+}
+
+/* #region Value Object */
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(try_from = "String", into = "String")]
+/* #endregion */
 pub struct AssetPath(pub String);
 
-impl<'de> Deserialize<'de> for AssetPath {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
+impl TryFrom<String> for AssetPath {
+    type Error = anyhow::Error;
 
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         // 1. Enforce relative paths starting with '/'
         if !s.starts_with('/') {
-            return Err(serde::de::Error::custom(
-                "Asset path must start with a forward slash '/'",
-            ));
+            return Err(anyhow!("Asset path must start with a forward slash '/'",));
         }
 
         // 2. Validate it's an image file
@@ -48,9 +57,13 @@ impl<'de> Deserialize<'de> for AssetPath {
         {
             Ok(AssetPath(s))
         } else {
-            Err(serde::de::Error::custom(
-                "Asset must point to a valid image extension",
-            ))
+            Err(anyhow!("Asset must point to a valid image extension",))
         }
+    }
+}
+
+impl From<AssetPath> for String {
+    fn from(value: AssetPath) -> Self {
+        value.0
     }
 }

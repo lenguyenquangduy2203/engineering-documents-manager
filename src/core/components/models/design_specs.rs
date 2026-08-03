@@ -1,14 +1,24 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Clone)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct DecisionRecord {
     pub decision: String,
     pub rationale: String,
     pub alternatives_considered: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "PascalCase")]
 #[serde(tag = "type", content = "data")]
+/* #endregion */
 pub enum DesignSpecSubType {
     DecisionRecord(DecisionRecord),
 }

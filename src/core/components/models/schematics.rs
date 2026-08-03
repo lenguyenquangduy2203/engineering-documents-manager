@@ -1,19 +1,35 @@
-use serde::{Deserialize, Serialize};
-
 use crate::core::components::models::values::paths::AssetPath;
 
-#[derive(Deserialize, Serialize, Clone)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct MermaidDiagram {
     pub definition: String,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct ImageLink {
     pub path: AssetPath,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "PascalCase")]
 #[serde(tag = "type", content = "data")]
+/* #endregion */
 pub enum SchematicSubType {
     MermaidDiagram(MermaidDiagram),
     ImageLink(ImageLink),

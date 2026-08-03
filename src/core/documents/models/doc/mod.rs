@@ -1,14 +1,20 @@
 mod lifecycle;
 mod mutations;
 
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
-
 use crate::core::documents::models::{
     doc_status::DocStatus, doc_types::DocTypes, layout_version_ids::LayoutVersionIds,
 };
 
-#[derive(Deserialize, Serialize, Clone, FromRow)]
+/* #region Domain Entity */
+#[derive(Debug, Clone)]
+/* #endregion */
+/* #region Serde DTO */
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
+/* #region Sqlx Record */
+#[derive(sqlx::FromRow)]
+/* #endregion */
 pub struct Document {
     pub id: Option<u32>,
     pub doc_type: DocTypes,
@@ -29,12 +35,22 @@ impl Document {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+/* #region Config Object */
+#[derive(Debug, Clone, Default)]
+/* #endregion */
+/* #region Serde Request */
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct DocumentMetadataForUpdate {
     pub id: u32,
     pub title: Option<String>,
 }
 
+/* #region Value Object */
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/* #endregion */
 pub struct ComponentSummary<'a> {
     pub root_id: u32,
     pub component_type: &'a str,

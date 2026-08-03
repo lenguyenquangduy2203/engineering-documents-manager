@@ -11,7 +11,7 @@ Content-Type: application/json
             "data": {
                 "decision": "Migrate core ledger to PostgreSQL",
                 "rationale": "We require robust native JSONB support and atomic multi-table transactions for workspace history tracking.",
-                "alternatives_considered": [
+                "alternativesConsidered": [
                     "MySQL (Limited JSON optimization options)",
                     "MongoDB (Lacks relational integrity constraints for transactional history logs)"
                 ]
@@ -67,7 +67,7 @@ Content-Type: application/json
             "data": {
                 "endpoint": "/api/v1/users/register",
                 "method": "POST",
-                "request_body_example": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"Secret123!\"\n}"
+                "requestBodyExample": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"Secret123!\"\n}"
             }
         }
     }
@@ -87,7 +87,7 @@ Content-Type: application/json
             "data": {
                 "decision": "Use Redis for user session store",
                 "rationale": "High read/write throughput and built-in TTL support for automatic session expiration.",
-                "alternatives_considered": [
+                "alternativesConsidered": [
                     "In-memory HashMap (lacks persistence across service restarts)",
                     "PostgreSQL sessions table (unnecessary DB write load)"
                 ]
@@ -117,7 +117,7 @@ Content-Type: application/json
             "data": {
                 "decision": "Chose core ledger to SQLite",
                 "rationale": "We require robust native JSON support and atomic multi-table transactions for workspace history tracking.",
-                "alternatives_considered": [
+                "alternativesConsidered": [
                     "MySQL (Limited JSON optimization options)",
                     "MongoDB (Lacks relational integrity constraints for transactional history logs)"
                 ]

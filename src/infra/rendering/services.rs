@@ -65,6 +65,7 @@ impl MarkdownRenderService {
         // 3. Component Contents
         for payload in payloads {
             let rendered = Self::render_component(payload)?;
+            out.push_str("---\n\n");
             out.push_str(&rendered);
             out.push_str("\n\n");
         }
