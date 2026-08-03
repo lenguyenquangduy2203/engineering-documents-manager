@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, fmt::Debug};
 
 use anyhow::Ok;
 use sqlx::{Pool, QueryBuilder, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
@@ -17,6 +17,6 @@ pub async fn get_conn() -> anyhow::Result<Pool<Sqlite>> {
     Ok(pool)
 }
 
-pub trait FilterSpecification: Send + Sync {
+pub trait FilterSpecification: Debug + Send + Sync {
     fn apply(&self, builder: &mut QueryBuilder<Sqlite>);
 }

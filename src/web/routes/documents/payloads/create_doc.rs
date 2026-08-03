@@ -1,9 +1,10 @@
-use serde::{Deserialize, Serialize};
-
 use crate::core::documents::models::{doc::Document, doc_types::DocTypes};
 
-#[derive(Deserialize)]
+/* #region Serde Request */
+#[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct CreateDocRequest {
     pub doc_type: DocTypes,
     pub title: String,
@@ -15,7 +16,10 @@ impl From<CreateDocRequest> for Document {
     }
 }
 
-#[derive(Serialize)]
+/* #region Serde Response */
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct CreatedResponse {
     pub id: u32,
 }

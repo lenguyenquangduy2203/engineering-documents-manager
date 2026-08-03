@@ -2,6 +2,9 @@ use sqlx::{QueryBuilder, Sqlite};
 
 use crate::infra::dbc::sqlx::FilterSpecification;
 
+/* #region Stateful Service Object */
+#[derive(Debug, Clone)]
+/* #endregion */
 pub struct TitleSpec(pub String);
 
 impl FilterSpecification for TitleSpec {

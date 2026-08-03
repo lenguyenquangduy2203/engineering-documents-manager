@@ -13,7 +13,8 @@ use crate::core::documents::errors::doc_status::DocStatusError;
 /* #endregion */
 /* #region Sqlx Data Type */
 #[derive(sqlx::Type)]
-#[sqlx(type_name = "text", rename_all = "UPPERCASE")]
+#[sqlx(type_name = "text")]
+#[sqlx(rename_all = "UPPERCASE")]
 /* #endregion */
 pub enum DocStatus {
     Draft,

@@ -6,6 +6,9 @@ use crate::{
     infra::dbc::sqlx::FilterSpecification,
 };
 
+/* #region Builder */
+#[derive(Debug, Default)]
+/* #endregion */
 pub struct ComponentQuery {
     specs: Vec<Box<dyn FilterSpecification>>,
     pub limit: i64,

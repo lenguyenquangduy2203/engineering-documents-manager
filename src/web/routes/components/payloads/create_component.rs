@@ -1,9 +1,10 @@
-use serde::{Deserialize, Serialize};
-
 use crate::core::components::models::{values::version::Version, wrapper::Component};
 
-#[derive(Deserialize)]
+/* #region Serde Request */
+#[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct CreateComponentRequest<T> {
     pub title: String,
     pub payload: T,
@@ -20,7 +21,10 @@ impl<T> From<CreateComponentRequest<T>> for Component<T> {
     }
 }
 
-#[derive(Serialize)]
+/* #region Serde Response */
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+/* #endregion */
 pub struct CreatedResponse {
     pub id: u32,
 }
