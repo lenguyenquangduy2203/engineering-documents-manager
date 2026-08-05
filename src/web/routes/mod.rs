@@ -10,7 +10,7 @@ use crate::{configs::{self, server::ServerConfig}, infra::{dbc::sqlx::get_conn, 
 
 pub async fn build() -> anyhow::Result<Router> {
     let config = configs::Config::from_env();
-    let dbc = Arc::new(get_conn().await?);
+    let dbc = get_conn().await?;
 
     let component_repository = Arc::new(SqliteComponentRepository::new(dbc.clone()));
     let document_repository = Arc::new(SqliteDocumentsRepository::new(dbc));

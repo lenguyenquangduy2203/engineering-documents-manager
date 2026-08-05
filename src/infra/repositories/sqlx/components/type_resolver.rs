@@ -31,7 +31,7 @@ impl ComponentTypeResolver for SqliteComponentRepository {
             "#,
             json_ids,
         )
-        .fetch_all(&*self.dbc)
+        .fetch_all(&self.dbc)
         .await
         .with_context(|| {
             format!(

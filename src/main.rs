@@ -1,10 +1,6 @@
 use anyhow::Ok;
 
-mod core;
-mod configs;
-mod web;
-mod utils;
-mod infra;
+use engineering_documents_manager::web;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

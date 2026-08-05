@@ -65,7 +65,7 @@ impl ComponentsRepository for SqliteComponentRepository {
         let specs = ComponentQuery::new(filter);
         specs.apply(&mut qb);
         let query = qb.build_query_as::<Component<Json<ComponentPayload>>>();
-        let rows = query.fetch_all(&*self.dbc).await?;
+        let rows = query.fetch_all(&self.dbc).await?;
 
         Ok(rows.into_iter()
             .map(Component::into)
@@ -73,7 +73,7 @@ impl ComponentsRepository for SqliteComponentRepository {
     }
 
     async fn find_latest_version_by_id(&self, component_id: u32) -> anyhow::Result<Option<Component<ComponentPayload>>> {
-        Self::fetch_opt_component_payload(component_id, &*self.dbc).await
+        Self::fetch_opt_component_payload(component_id, &self.dbc).await
     }
 
     async fn update_component(

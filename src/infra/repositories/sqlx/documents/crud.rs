@@ -18,7 +18,7 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             document.title,
             &document.status.to_string(),
         )
-        .execute(&*self.dbc)
+        .execute(&self.dbc)
         .await?;
 
         Ok(res.last_insert_rowid() as u32)
@@ -43,7 +43,7 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
         specs.apply(&mut qb);
         let query = qb.build_query_as::<Document>();
         
-        query.fetch_all(&*self.dbc).await.map_err(|e| anyhow!(e))
+        query.fetch_all(&self.dbc).await.map_err(|e| anyhow!(e))
     }
 
     async fn update_doc(
@@ -85,7 +85,7 @@ impl DocumentLifecycleManager for SqliteDocumentsRepository {
             "#,
             doc_id
         )
-        .execute(&*self.dbc)
+        .execute(&self.dbc)
         .await?;
 
         if res.rows_affected() == 0 {

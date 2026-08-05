@@ -36,7 +36,7 @@ impl ComponentPayloadResolver for SqliteComponentRepository {
             "#,
             doc_id,
             json_ids,
-        ).fetch_all(&*self.dbc).await
+        ).fetch_all(&self.dbc).await
         .with_context(|| format!("Failed to fetch component payloads for version_ids: {version_ids:?}"))?
         .into_iter().map(ComponentPayloadRef::try_from).collect()
     }

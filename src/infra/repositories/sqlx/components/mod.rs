@@ -3,20 +3,18 @@ mod type_resolver;
 mod payload_resolver;
 mod rows;
 
-use std::sync::Arc;
-
 use anyhow::Ok;
 use serde_json::Value;
-use sqlx::{Executor, Pool, Sqlite, Transaction, types::Json};
+use sqlx::{Executor, Sqlite, SqlitePool, Transaction, types::Json};
 
 use crate::core::components::models::{payload::ComponentPayload, values::version::Version, wrapper::Component};
 
 pub struct SqliteComponentRepository {
-    dbc: Arc<Pool<Sqlite>>,
+    dbc: SqlitePool,
 }
 
 impl SqliteComponentRepository {
-    pub fn new(dbc: Arc<Pool<Sqlite>>) -> Self {
+    pub fn new(dbc: SqlitePool) -> Self {
         Self { dbc }
     }
 

@@ -3,21 +3,19 @@ mod crud;
 mod layouts;
 mod publication;
 
-use std::sync::Arc;
-
 use anyhow::Ok;
 use sqlx::error::BoxDynError;
-use sqlx::{Database, Decode, Executor, Pool, Sqlite, Type};
+use sqlx::{Database, Decode, Executor, Sqlite, SqlitePool, Type};
 
 use crate::core::documents::models::layout_version_ids::LayoutVersionIds;
 use crate::core::documents::models::{doc::Document, doc_types::DocTypes, doc_status::DocStatus};
 
 pub struct SqliteDocumentsRepository {
-    dbc: Arc<Pool<Sqlite>>,
+    dbc: SqlitePool,
 }
 
 impl SqliteDocumentsRepository {
-    pub fn new(dbc: Arc<Pool<Sqlite>>) -> Self {
+    pub fn new(dbc: SqlitePool) -> Self {
         Self { dbc }
     }
 
