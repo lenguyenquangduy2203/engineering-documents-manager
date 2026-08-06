@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, Sqlite};
 
-use crate::core::documents::{models::doc::{Document, DocumentMetadataForUpdate}, queries::document::DocumentQuery, repositories::{DocumentFilterQuery, DocumentLifecycleManager, DocumentUpdateError}};
+use crate::core::documents::{models::doc::{Document, DocumentMetadataForUpdate}, queries::document::DocumentQuery, repositories::document_lifecycle_manager::{DocumentFilterQuery, DocumentLifecycleManager, DocumentUpdateError}};
 
 use super::SqliteDocumentsRepository;
 

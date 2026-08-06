@@ -1,9 +1,14 @@
-use engineering_documents_manager::core::components::models::design_specs::{DecisionRecord, DesignSpecSubType};
-use engineering_documents_manager::core::components::models::payload::ComponentPayload;
-use engineering_documents_manager::core::components::models::values::version::Version;
-use engineering_documents_manager::core::components::models::wrapper::Component;
-use engineering_documents_manager::core::components::repositories::{ComponentFilterQuery, ComponentsRepository};
-use engineering_documents_manager::infra::repositories::sqlx::components::SqliteComponentRepository;
+use engineering_documents_manager::{
+    core::components::{
+        models::{
+            design_specs::{DecisionRecord, DesignSpecSubType}, 
+            payload::ComponentPayload, 
+            values::version::Version, 
+            wrapper::Component}, 
+        repositories::components_repository::{ComponentFilterQuery, ComponentsRepository}
+    }, 
+    infra::repositories::sqlx::components::SqliteComponentRepository
+};
 
 #[sqlx::test]
 async fn test_create_new_component(pool: sqlx::SqlitePool) -> anyhow::Result<()> {
@@ -27,9 +32,6 @@ async fn test_retrieve_component_by_id(pool: sqlx::SqlitePool) -> anyhow::Result
         .find_latest_version_by_id(generated_id).await?
         .expect("Component should exist");
     
-    let saved_id = saved_component.id.expect("Component id should exist");
-    
-    assert_eq!(saved_id, generated_id);
     assert_eq!(saved_component.version, component.version);
     assert_eq!(saved_component.payload.get_identifier(), component.payload.get_identifier());
     

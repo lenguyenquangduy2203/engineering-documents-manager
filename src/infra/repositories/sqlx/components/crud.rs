@@ -4,10 +4,10 @@ use sqlx::{QueryBuilder, Sqlite, types::Json};
 use crate::core::components::{
     models::{payload::ComponentPayload, wrapper::Component}, 
     queries::component::ComponentQuery, 
-    repositories::{
+    repositories::components_repository::{
         ComponentFilterQuery, ComponentsRepository, 
         RemoveComponentError, UpdateComponentError
-        }
+    }
 };
 
 use super::SqliteComponentRepository;

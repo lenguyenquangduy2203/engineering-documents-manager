@@ -1,7 +1,7 @@
 use crate::{
     core::components::{
         queries::specifications::{group::GroupSpec, sub_type::SubtypeSpec, title::TitleSpec},
-        repositories::ComponentFilterQuery,
+        repositories::components_repository::ComponentFilterQuery,
     },
     infra::dbc::sqlx::FilterSpecification,
 };

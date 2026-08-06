@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{Json, extract::{Path, State}, http::StatusCode, response::IntoResponse};
 
-use crate::{core::documents::{models::doc::DocumentMetadataForUpdate, repositories::{DocumentLifecycleManager, DocumentUpdateError}}, web::routes::documents::payloads::update_doc::UpdateDocRequest};
+use crate::{core::documents::{models::doc::DocumentMetadataForUpdate, repositories::document_lifecycle_manager::{DocumentLifecycleManager, DocumentUpdateError}}, web::routes::documents::payloads::update_doc::UpdateDocRequest};
 
 pub async fn handler(
     State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,

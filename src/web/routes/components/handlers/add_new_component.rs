@@ -5,7 +5,7 @@ use axum::response::IntoResponse;
 use axum::{Json, extract::State};
 
 use crate::core::components::models::payload::ComponentPayload;
-use crate::core::components::repositories::ComponentsRepository;
+use crate::core::components::repositories::components_repository::ComponentsRepository;
 use crate::web::routes::components::payloads::create_component::{CreateComponentRequest, CreatedResponse};
 
 pub async fn handler(

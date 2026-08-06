@@ -5,10 +5,12 @@ use axum_macros::FromRef;
 use crate::{
     core::{
         components::repositories::{
-            ComponentPayloadResolver, ComponentTypeResolver, ComponentsRepository,
+            components_repository::ComponentsRepository, ComponentPayloadResolver,
+            ComponentTypeResolver,
         },
         documents::repositories::{
-            DocumentLayoutsModifier, DocumentLifecycleManager, DocumentPublisher, DocumentsResolver,
+            document_lifecycle_manager::DocumentLifecycleManager, DocumentLayoutsModifier,
+            DocumentPublisher, DocumentsResolver,
         },
     },
     infra::rendering::services::DocumentExportService,

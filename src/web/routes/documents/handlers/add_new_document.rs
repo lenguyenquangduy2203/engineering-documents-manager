@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::{
-    core::documents::{models::doc::Document, repositories::DocumentLifecycleManager}, 
+    core::documents::{models::doc::Document, repositories::document_lifecycle_manager::DocumentLifecycleManager}, 
     web::routes::documents::payloads::create_doc::{CreateDocRequest, CreatedResponse}
 };
 

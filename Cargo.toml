@@ -23,3 +23,7 @@ tracing-subscriber = {version = "0.3.23", features = ["env-filter"]}
 [[test]]
 name = "component_repository_test"
 path = "tests/core/component/repositories/components_repository_test.rs"
+
+[[test]]
+name = "document_lifecycle_manager_test"
+path = "tests/core/documents/repositories/document_lifecycle_manager_test.rs"

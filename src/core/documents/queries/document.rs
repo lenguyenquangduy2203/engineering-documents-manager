@@ -1,7 +1,7 @@
 use crate::{
     core::documents::{
         queries::specifications::{doc_type::DocTypeSpec, status::StatusSpec, title::TitleSpec},
-        repositories::DocumentFilterQuery,
+        repositories::document_lifecycle_manager::DocumentFilterQuery,
     },
     infra::dbc::sqlx::FilterSpecification,
 };

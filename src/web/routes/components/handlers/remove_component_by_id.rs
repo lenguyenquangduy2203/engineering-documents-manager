@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse};
 
-use crate::core::components::repositories::ComponentsRepository;
+use crate::core::components::repositories::components_repository::ComponentsRepository;
 
 pub async fn handler(
     State(ctx): State<Arc<dyn ComponentsRepository>>,

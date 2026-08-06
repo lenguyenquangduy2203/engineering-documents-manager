@@ -10,7 +10,7 @@ use axum::{
 use crate::{
     core::components::{
         models::{payload::ComponentPayload, values::version::Version, wrapper::Component}, 
-        repositories::{ComponentsRepository, UpdateComponentError}
+        repositories::components_repository::{ComponentsRepository, UpdateComponentError}
     }, 
     web::routes::components::payloads::update_component::UpdateComponentRequest
 };

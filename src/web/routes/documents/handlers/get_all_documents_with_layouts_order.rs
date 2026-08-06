@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{Json, extract::{Query, State}, http::StatusCode, response::IntoResponse};
 
-use crate::core::documents::repositories::{DocumentFilterQuery, DocumentLifecycleManager};
+use crate::core::documents::repositories::document_lifecycle_manager::{DocumentFilterQuery, DocumentLifecycleManager};
 
 pub async fn handler(
     State(document_lifecycle_manager): State<Arc<dyn DocumentLifecycleManager>>,

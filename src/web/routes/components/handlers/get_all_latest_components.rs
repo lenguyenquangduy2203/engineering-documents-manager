@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{Json, extract::{Query, State}, http::StatusCode, response::IntoResponse};
 
-use crate::core::components::repositories::{ComponentFilterQuery, ComponentsRepository};
+use crate::core::components::repositories::components_repository::{ComponentFilterQuery, ComponentsRepository};
 
 pub async fn handler(
     State(ctx): State<Arc<dyn ComponentsRepository>>,
