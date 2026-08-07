@@ -1,9 +1,14 @@
 use engineering_documents_manager::{
     core::components::{
         models::{
-            design_specs::{DecisionRecord, DesignSpecSubType}, payload::ComponentPayload, references::{ApiEndpoint, ReferenceSubType}, schematics::{ImageLink, SchematicSubType}, values::{http_method::HttpMethod, paths::{ApiPath, AssetPath}, version::Version}, wrapper::Component}, repositories::components_repository::{ComponentFilterQuery, ComponentsRepository}
+            design_specs::{DecisionRecord, DesignSpecSubType}, payload::ComponentPayload::{self, DesignSpec, Schematic}, references::{ApiEndpoint, ReferenceSubType}, schematics::{ImageLink, MermaidDiagram, SchematicSubType}, values::{http_method::HttpMethod, paths::{ApiPath, AssetPath}, version::Version}, wrapper::Component}, repositories::components_repository::{ComponentFilterQuery, ComponentsRepository}
     }, infra::repositories::sqlx::components::SqliteComponentRepository
 };
+
+#[path ="../../../utils/mod.rs"]
+mod utils;
+
+use utils::sample_provider::SampleProvider;
 
 #[sqlx::test]
 async fn test_create_new_component(pool: sqlx::SqlitePool) -> anyhow::Result<()> {
@@ -54,16 +59,42 @@ async fn test_retrieve_component_by_id(pool: sqlx::SqlitePool) -> anyhow::Result
 async fn test_retrieve_all_components(pool: sqlx::SqlitePool) -> anyhow::Result<()> {
     let component_repo = setup_component_repo(pool);
 
-    let expected_len = 3;
-    let expected_image_link_version = Version::default().next();
-    
     let components = component_repo
-        .find_all_latest_version(ComponentFilterQuery::default()).await?;
-    assert_eq!(components.len(), expected_len);
+        .find_all_latest_version(ComponentFilterQuery::default())
+        .await?;
 
-    let image_link = components.get(1)
-        .expect("Expected at least 2 components returned from DB");
+    assert_eq!(components.len(), 3);
+
+    // 1. Assert DesignSpec Decision Record
+    let decision_record = components
+        .get(0)
+        .expect("Expected design spec decision record at index 0");
+    assert_eq!(decision_record.version, Version::default());
+    assert_eq!(
+        decision_record.payload.get_identifier(),
+        DesignSpec(DesignSpecSubType::DecisionRecord(DecisionRecord::sample())).get_identifier()
+    );
+
+    // 2. Assert Schematic Image Link
+    let expected_image_link_version = Version::default().next();
+    let image_link = components
+        .get(1)
+        .expect("Expected schematic image link at index 1");
     assert_eq!(image_link.version, expected_image_link_version);
+    assert_eq!(
+        image_link.payload.get_identifier(),
+        Schematic(SchematicSubType::ImageLink(ImageLink::sample())).get_identifier()
+    );
+
+    // 3. Assert Schematic Mermaid Diagram
+    let mermaid_diagram = components
+        .get(2)
+        .expect("Expected schematic mermaid diagram at index 2");
+    assert_eq!(mermaid_diagram.version, Version::default());
+    assert_eq!(
+        mermaid_diagram.payload.get_identifier(),
+        Schematic(SchematicSubType::MermaidDiagram(MermaidDiagram::sample())).get_identifier()
+    );
 
     anyhow::Ok(())
 }
