@@ -7,7 +7,7 @@ use crate::core::{
         services::update_document_layouts::DocumentLayoutService, 
         errors::update_layouts::DocumentLayoutServiceError
     }, 
-    components::repositories::ComponentTypeResolver, 
+    components::repositories::component_type_resolver::ComponentTypeResolver, 
     documents::{
         errors::doc_layout::DocumentLayoutError, 
         repositories::{DocumentLayoutsModifier, DocumentsResolver}

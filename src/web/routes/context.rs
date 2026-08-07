@@ -5,8 +5,8 @@ use axum_macros::FromRef;
 use crate::{
     core::{
         components::repositories::{
+            component_type_resolver::ComponentTypeResolver,
             components_repository::ComponentsRepository, ComponentPayloadResolver,
-            ComponentTypeResolver,
         },
         documents::repositories::{
             document_lifecycle_manager::DocumentLifecycleManager, DocumentLayoutsModifier,

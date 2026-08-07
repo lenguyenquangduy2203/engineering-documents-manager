@@ -1,6 +1,6 @@
 use crate::core::{
     applications::errors::update_layouts::DocumentLayoutServiceError, 
-    components::repositories::ComponentTypeResolver, 
+    components::repositories::component_type_resolver::ComponentTypeResolver, 
     documents::{
         models::doc::ComponentSummary, 
         repositories::{DocumentLayoutsModifier, DocumentsResolver},

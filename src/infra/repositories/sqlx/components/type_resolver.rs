@@ -1,7 +1,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 
-use crate::core::components::repositories::{ComponentRef, ComponentTypeResolver};
+use crate::core::components::repositories::component_type_resolver::{ComponentRef, ComponentTypeResolver};
 
 use super::SqliteComponentRepository;
 
