@@ -2,7 +2,8 @@ use anyhow::Context;
 use sqlx::prelude::FromRow;
 
 use crate::core::components::{
-    models::payload::ComponentPayload, repositories::ComponentPayloadRef,
+    models::payload::ComponentPayload,
+    repositories::component_payload_resolver::ComponentPayloadRef,
 };
 
 #[derive(FromRow)]

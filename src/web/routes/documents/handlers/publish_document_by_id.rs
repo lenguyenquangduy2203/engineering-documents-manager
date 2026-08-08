@@ -8,7 +8,7 @@ use crate::{
             services::publish_document::DocumentPublishingService, 
             errors::publish_doc::PublishDocumentError
         }, 
-        components::repositories::ComponentPayloadResolver, 
+        components::repositories::component_payload_resolver::ComponentPayloadResolver, 
         documents::repositories::{DocumentPublisher, DocumentsResolver}
     }, 
     infra::rendering::services::DocumentExportService

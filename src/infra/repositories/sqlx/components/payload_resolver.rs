@@ -2,7 +2,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 
 use crate::{
-    core::components::repositories::{ComponentPayloadRef, ComponentPayloadResolver},
+    core::components::repositories::component_payload_resolver::{ComponentPayloadRef, ComponentPayloadResolver},
     infra::repositories::sqlx::components::rows::payload_ref::ComponentPayloadRefRow
 };
 

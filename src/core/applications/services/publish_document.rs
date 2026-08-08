@@ -3,7 +3,10 @@ use std::sync::Arc;
 use crate::{
     core::{
         applications::errors::publish_doc::PublishDocumentError, 
-        components::{models::payload::ComponentPayload, repositories::ComponentPayloadResolver}, 
+        components::{
+            models::payload::ComponentPayload, 
+            repositories::component_payload_resolver::ComponentPayloadResolver
+        }, 
         documents::{
             models::doc::Document, 
             repositories::{DocumentPublishParams, DocumentPublisher, DocumentsResolver}            
