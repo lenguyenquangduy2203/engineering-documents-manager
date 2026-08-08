@@ -3,7 +3,7 @@ use crate::core::{
     components::repositories::component_type_resolver::ComponentTypeResolver, 
     documents::{
         models::doc::ComponentSummary, 
-        repositories::{DocumentLayoutsModifier, DocumentsResolver},
+        repositories::{document_layouts_modifier::DocumentLayoutsModifier, document_resolver::DocumentsResolver},
     }
 };
 

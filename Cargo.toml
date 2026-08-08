@@ -35,3 +35,7 @@ path = "tests/core/components/repositories/component_type_resolver_test.rs"
 [[test]]
 name = "component_payload_resolver_test"
 path = "tests/core/components/repositories/component_payload_resolver_test.rs"
+
+[[test]]
+name = "document_layouts_modifier_test"
+path = "tests/core/documents/repositories/document_layouts_modifier_test.rs"

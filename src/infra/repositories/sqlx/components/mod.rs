@@ -9,6 +9,9 @@ use sqlx::{Executor, Sqlite, SqlitePool, Transaction, types::Json};
 
 use crate::core::components::models::{payload::ComponentPayload, values::version::Version, wrapper::Component};
 
+/* #region Stateful Service Object */
+#[derive(Debug, Clone)]
+/* #endregion */
 pub struct SqliteComponentRepository {
     dbc: SqlitePool,
 }

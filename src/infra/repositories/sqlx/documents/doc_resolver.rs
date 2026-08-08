@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::core::documents::{models::doc::Document, repositories::DocumentsResolver};
+use crate::core::documents::{models::doc::Document, repositories::document_resolver::DocumentsResolver};
 
 use super::SqliteDocumentsRepository;
 

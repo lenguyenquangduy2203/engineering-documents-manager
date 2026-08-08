@@ -10,6 +10,9 @@ use sqlx::{Database, Decode, Executor, Sqlite, SqlitePool, Type};
 use crate::core::documents::models::layout_version_ids::LayoutVersionIds;
 use crate::core::documents::models::{doc::Document, doc_types::DocTypes, doc_status::DocStatus};
 
+/* #region Stateful Service Object */
+#[derive(Debug, Clone)]
+/* #endregion */
 pub struct SqliteDocumentsRepository {
     dbc: SqlitePool,
 }

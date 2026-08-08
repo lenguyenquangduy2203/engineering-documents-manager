@@ -1,19 +1,9 @@
+pub mod document_resolver;
 pub mod document_lifecycle_manager;
+pub mod document_layouts_modifier;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-
-use crate::core::documents::models::doc::Document;
-
-#[async_trait]
-pub trait DocumentsResolver: Send + Sync {
-    async fn find_doc_by_id(&self, doc_id: u32) -> anyhow::Result<Option<Document>>;
-}
-
-#[async_trait]
-pub trait DocumentLayoutsModifier: Send + Sync {
-    async fn replace_layouts(&self, doc_id: u32, version_ids: &[u32]) -> anyhow::Result<()>;
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct DocumentPublishParams {

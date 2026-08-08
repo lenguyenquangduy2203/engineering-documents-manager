@@ -11,7 +11,7 @@ use crate::core::documents::{
     errors::doc_metadata::DocumentMetadataError
 };
 
-use super::DocumentsResolver;
+use super::document_resolver::DocumentsResolver;
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct DocumentFilterQuery {

@@ -10,8 +10,9 @@ use crate::{
             components_repository::ComponentsRepository,
         },
         documents::repositories::{
-            document_lifecycle_manager::DocumentLifecycleManager, DocumentLayoutsModifier,
-            DocumentPublisher, DocumentsResolver,
+            document_layouts_modifier::DocumentLayoutsModifier,
+            document_lifecycle_manager::DocumentLifecycleManager,
+            document_resolver::DocumentsResolver, DocumentPublisher,
         },
     },
     infra::rendering::services::DocumentExportService,

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::core::documents::repositories::DocumentLayoutsModifier;
+use crate::core::documents::repositories::document_layouts_modifier::DocumentLayoutsModifier;
 
 use super::SqliteDocumentsRepository;
 
