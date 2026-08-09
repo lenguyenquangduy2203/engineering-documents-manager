@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use anyhow::anyhow;
 
-use crate::core::documents::repositories::{DocumentPublishParams, DocumentPublisher};
+use crate::core::documents::repositories::document_publisher::{DocumentPublishParams, DocumentPublisher};
 
 use super::SqliteDocumentsRepository;
 

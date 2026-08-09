@@ -9,7 +9,7 @@ use crate::{
             errors::publish_doc::PublishDocumentError
         }, 
         components::repositories::component_payload_resolver::ComponentPayloadResolver, 
-        documents::repositories::{DocumentPublisher, document_resolver::DocumentsResolver}
+        documents::repositories::{document_publisher::DocumentPublisher, document_resolver::DocumentsResolver}
     }, 
     infra::rendering::services::DocumentExportService
 };

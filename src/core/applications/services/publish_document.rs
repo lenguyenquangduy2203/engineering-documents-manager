@@ -9,7 +9,10 @@ use crate::{
         }, 
         documents::{
             models::doc::Document, 
-            repositories::{DocumentPublishParams, DocumentPublisher, document_resolver::DocumentsResolver}            
+            repositories::{
+                document_publisher::{DocumentPublishParams, DocumentPublisher}, 
+                document_resolver::DocumentsResolver
+            }
         },
     }, infra::rendering::services::DocumentExportService
 };

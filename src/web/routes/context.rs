@@ -12,7 +12,7 @@ use crate::{
         documents::repositories::{
             document_layouts_modifier::DocumentLayoutsModifier,
             document_lifecycle_manager::DocumentLifecycleManager,
-            document_resolver::DocumentsResolver, DocumentPublisher,
+            document_publisher::DocumentPublisher, document_resolver::DocumentsResolver,
         },
     },
     infra::rendering::services::DocumentExportService,
